@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מבדק התא</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1c1c28; --ink-2:#4a4a5a; --ink-3:#7a7a88;
+  --bg:#ffffff; --line:#d9d9e2; --soft:#f6f5fa;
+  --accent:#3d3a8c; --orange:#e8743b; --ok:#1b7a4b; --bad:#b3261e;
+  --sans:"Almoni Neue","Almoni ML v5 AAA","Heebo","Arial",sans-serif;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-weight:400;font-size:18px;line-height:1.85;direction:rtl;text-align:right;}
+.wrap{max-width:820px;margin:0 auto;padding:0 clamp(18px,5vw,40px);}
+.bar{border-bottom:3px solid var(--orange);position:sticky;top:0;background:#fff;z-index:5;}
+.bar .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;padding-top:12px;padding-bottom:10px;}
+.bar h1{margin:0;font-size:20px;font-weight:700;color:var(--accent);}
+.bar .sub{font-size:14.5px;color:var(--ink-3);}
+.spacer{margin-inline-start:auto;}
+.pill{display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--line);background:#fff;color:var(--ink-2);border-radius:999px;padding:6px 20px;font:inherit;font-size:16px;font-weight:500;line-height:1.6;cursor:pointer;text-decoration:none;}
+.pill:hover{border-color:var(--accent);color:var(--accent);}
+.pill.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+.pill.go{background:var(--orange);border-color:var(--orange);color:#fff;}
+.pill[disabled]{opacity:.45;cursor:not-allowed;}
+svg.ic{width:1.05em;height:1.05em;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.12em;flex:none;}
+a{color:var(--accent);}
+:focus-visible{outline:2px solid var(--orange);outline-offset:3px;}
+
+.screen{display:none;} .screen.on{display:block;}
+.intro{margin:36px 0 0;}
+.intro h2{margin:0 0 6px;font-size:30px;font-weight:700;color:var(--accent);}
+.intro p{margin:0 0 10px;}
+.intro ul{margin:6px 0 18px;padding-inline-start:24px;}
+.form{margin:26px 0;padding:22px 24px;background:var(--soft);border-radius:14px;}
+.form label.t{display:block;font-weight:500;margin:10px 0 4px;}
+input.txt{width:100%;border:2px solid #9a9aa8;border-radius:10px;padding:8px 14px;font:inherit;font-size:18px;background:#fff;color:var(--ink);}
+.vers{display:flex;gap:12px;flex-wrap:wrap;margin:6px 0 4px;}
+.vers .pill{font-size:20px;padding:8px 34px;}
+.hint{font-size:15px;color:var(--ink-3);margin:4px 0 0;}
+.err{color:var(--bad);font-weight:500;margin:12px 0 0;min-height:1.4em;}
+
+.unit{margin-top:58px;}
+.unit h3{margin:0;font-size:25px;font-weight:700;color:var(--accent);}
+.unit .about{margin:4px 0 0;font-size:16px;color:var(--ink-3);}
+.unit .read{margin:16px 0 0;font-weight:500;color:var(--orange);}
+.passage{margin:14px 0 6px;} .passage p{margin:0 0 14px;}
+table.data{border-collapse:collapse;max-width:100%;display:block;overflow-x:auto;font-size:16.5px;margin:12px 0 4px;}
+table.data th,table.data td{border:1.5px solid #9a9aa8;padding:8px 14px;text-align:center;font-weight:400;}
+table.data th{font-weight:700;background:var(--soft);}
+table.data td.l{text-align:right;}
+figure{margin:22px 0;}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto;}
+figcaption{font-size:15px;color:var(--ink-2);text-align:center;margin-top:8px;font-weight:500;}
+.note{font-size:14.5px;color:var(--ink-3);margin:0 0 8px;}
+
+.q{margin-top:48px;display:flex;gap:18px;align-items:flex-start;}
+.qn{flex:none;min-width:42px;height:42px;border:2px solid var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);font-size:19px;margin-top:2px;}
+.qb{flex:1;min-width:0;}
+.qt{font-weight:500;margin:0 0 16px;}
+.opts{display:grid;gap:14px;margin:0;}
+.row{display:flex;align-items:flex-start;gap:14px;cursor:pointer;}
+.sq{flex:none;width:30px;height:30px;margin-top:5px;border:2px solid #6a6a7a;border-radius:4px;background:#fff;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;color:var(--ink);font-size:20px;font-weight:700;line-height:1;font-family:inherit;}
+.sq:hover{border-color:var(--orange);background:#fff6f0;}
+.sq.sel{border-color:var(--accent);color:var(--accent);background:#f0efff;}
+.num{flex:none;font-weight:500;color:var(--ink-3);min-width:12px;}
+.otxt{flex:1;}
+textarea.ans{width:100%;border:2px solid #9a9aa8;border-radius:8px;background:#fff;color:var(--ink);padding:6px 16px;font:inherit;font-size:18px;line-height:34px;resize:vertical;margin-bottom:12px;
+  background-image:repeating-linear-gradient(to bottom,transparent,transparent 33px,#e1e1ea 33px,#e1e1ea 34px);background-attachment:local;}
+.lab{font-weight:700;margin:6px 0 2px;color:var(--accent);}
+table.cells{border-collapse:collapse;width:100%;font-size:17px;}
+table.cells th,table.cells td{border:1.5px solid #9a9aa8;padding:8px 12px;vertical-align:middle;}
+table.cells th{background:var(--soft);font-weight:700;text-align:center;}
+table.cells td.c{text-align:center;width:90px;}
+table.cells input{width:100%;border:0;border-bottom:2px solid #c0c0cc;background:transparent;font:inherit;font-size:17px;padding:4px 4px;color:var(--ink);min-width:80px;}
+table.cells input:focus{outline:none;border-bottom-color:var(--orange);}
+.tblwrap{overflow-x:auto;}
+select.cl{font:inherit;font-size:17px;border:2px solid #9a9aa8;border-radius:8px;padding:2px 8px;background:#fff;color:var(--ink);margin:0 4px;max-width:100%;}
+.cloze{line-height:2.4;}
+.rad{width:26px;height:26px;border:2px solid #6a6a7a;border-radius:50%;background:#fff;cursor:pointer;padding:0;display:inline-flex;align-items:center;justify-content:center;font:inherit;}
+.rad.sel{border-color:var(--accent);background:var(--accent);}
+.rad.sel::after{content:"";width:10px;height:10px;border-radius:50%;background:#fff;}
+
+.fbk{margin-top:64px;padding:22px 24px;border:2px solid var(--line);border-radius:14px;}
+.fbk h3{margin:0 0 4px;font-size:22px;font-weight:700;color:var(--accent);}
+.fbk .lv{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 14px;}
+.fbk textarea.ans{min-height:70px;}
+.submitrow{margin:30px 0 0;display:flex;gap:14px;align-items:center;flex-wrap:wrap;}
+.msg{font-weight:500;}
+.modal{position:fixed;inset:0;background:rgba(28,28,40,.5);display:none;align-items:center;justify-content:center;padding:20px;z-index:20;}
+.modal.on{display:flex;}
+.modal .box{background:#fff;border-radius:16px;padding:24px 28px;max-width:440px;}
+.modal .box p{margin:0 0 16px;}
+.done{margin:80px 0;text-align:center;}
+.done h2{font-size:32px;color:var(--accent);margin:0 0 8px;}
+footer{margin-top:80px;border-top:1px solid var(--line);padding:22px 0 34px;font-size:14.5px;color:var(--ink-3);}
+footer .wrap{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;}
+footer a{text-decoration:none;font-weight:700;}
+.timer{font-variant-numeric:tabular-nums;color:var(--ink-3);font-size:15px;}
+/* ---- ציר התקדמות ---- */
+.bar .wrap.track{display:none;padding-top:2px;padding-bottom:8px;}
+.bar .wrap.track.on{display:block;}
+.stations{width:100%;}
+.stations{display:flex;align-items:flex-start;position:relative;margin:6px 4px 0;}
+.stn{flex:1;display:flex;flex-direction:column;align-items:center;position:relative;background:none;border:0;font:inherit;cursor:pointer;padding:0;color:var(--ink-3);}
+.stn::before{content:"";position:absolute;top:17px;right:50%;width:100%;height:5px;background:var(--line);z-index:0;}
+.stn::after{content:"";position:absolute;top:17px;right:50%;width:calc(var(--fill,0)*100%);height:5px;background:var(--ok);z-index:0;transition:width .3s;}
+.stn:last-child::before,.stn:last-child::after{display:none;}
+.stn .dotc{position:relative;z-index:1;width:40px;height:40px;border-radius:50%;border:3px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:var(--ink-3);transition:all .2s;}
+.stn .lbl{font-size:13px;margin-top:3px;line-height:1.3;max-width:120px;text-align:center;}
+.stn.cur .dotc{border-color:var(--accent);background:var(--accent);color:#fff;box-shadow:0 0 0 5px #e4e3fa;}
+.stn.cur .lbl{color:var(--accent);font-weight:700;}
+.stn.fin .dotc{border-color:var(--ok);background:var(--ok);color:#fff;}
+.stn.part .dotc{border-color:var(--orange);color:var(--orange);}
+.stn .dotc svg{width:20px;height:20px;}
+.allbar{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:8px;}
+.allbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--orange),var(--ok));transition:width .3s;}
+.allpct{font-size:13px;color:var(--ink-3);margin-top:2px;}
+/* ---- יחידות בלשוניות ---- */
+.unit{display:none;margin-top:26px;} .unit.on{display:block;}
+.hero{margin:0 0 6px;border-radius:20px;overflow:hidden;border:3px solid #ffe2c9;background:#fff3e6;position:relative;}
+.hero img{display:block;width:100%;height:auto;max-height:260px;object-fit:cover;}
+.hero .cap{position:absolute;bottom:0;right:0;left:0;padding:26px 20px 10px;background:linear-gradient(0deg,rgba(40,30,70,.72),rgba(40,30,70,0));color:#fff;}
+.hero .cap b{font-size:24px;display:block;line-height:1.3;} .hero .cap span{font-size:15px;opacity:.95;}
+.unitnav{display:flex;gap:12px;justify-content:space-between;align-items:center;margin:46px 0 0;flex-wrap:wrap;}
+.cheer{margin:30px 0 0;padding:14px 20px;border-radius:14px;background:#e9f7ef;border:2px solid #bfe5cf;color:#14633c;font-weight:500;display:none;}
+.cheer.on{display:block;}
+/* ---- קטעי קריאה ממוסגרים ---- */
+.reading{margin:30px 0 8px;border-radius:18px;background:#fff8e8;border:2px solid #f0d9a8;overflow:hidden;}
+.reading .rh{display:flex;align-items:center;gap:8px;background:#f6e2b3;color:#6b4a07;font-weight:700;font-size:15px;padding:7px 18px;}
+.reading .rh svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.reading .rb{padding:6px 22px 12px;}
+.reading .rf{display:flex;align-items:center;gap:10px;padding:6px 18px 9px;color:#8a6a2a;font-size:13.5px;}
+.reading .rf::before,.reading .rf::after{content:"";flex:1;border-top:2px dashed #e5cd96;}
+.reading .passage{margin:12px 0 4px;}
+.reading table.data{background:#fff;}
+.reading figure{background:#fff;border-radius:14px;padding:12px;border:1px solid #f0e2c0;}
+.qa{margin-top:34px;}
+.q.answered .qn{background:var(--ok);border-color:var(--ok);color:#fff;}
+.mascot{width:min(300px,70%);height:auto;border-radius:22px;display:block;margin:0 auto 6px;}
+.starthero{display:flex;gap:26px;align-items:center;flex-wrap:wrap;margin-top:30px;}
+.starthero .tx{flex:1 1 320px;} .starthero .im{flex:0 1 300px;}
+.starthero .im img{width:100%;height:auto;border-radius:22px;border:3px solid #ffe2c9;}
+@media (max-width:560px){ .stn .lbl{font-size:11.5px;} .stn .dotc{width:34px;height:34px;} .stn::before,.stn::after{top:14px;} .hero .cap b{font-size:19px;} body{font-size:17px;} .q{gap:12px;} .qn{min-width:36px;height:36px;font-size:17px;} .intro h2{font-size:25px;} .unit h3{font-size:22px;} }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    <h1>מבדק התא</h1>
+    <span class="sub" id="hsub">מדע וטכנולוגיה, כיתה ח׳</span>
+    <span class="timer spacer" id="timer" title="הזמן שעבר מתחילת המבדק"></span>
+  </div>
+  <div class="wrap track" id="track" aria-label="ציר התקדמות"></div>
+</header>
+
+<main class="wrap">
+
+<section class="screen on" id="s-start">
+  <div class="starthero">
+    <div class="tx intro" style="margin-top:0">
+    <h2>מבדק במדע וטכנולוגיה: התא</h2>
+    <p>שלום! התא הקטן שלנו מחכה לכן בשלוש הרפתקאות. בכל יחידה קטע מידע על נושא אחר, ושאלות שמבקשות לחשוב ולהסביר. המבדק נועד לקצת יותר מ-45 דקות.</p>
+    </div>
+    <div class="im"><img src="__IMG_wave__" alt="דמות חמודה של תא שמנופפת לשלום"></div>
+  </div>
+  <div class="intro" style="margin-top:14px">
+    <ul>
+      <li>קוראים לאט ובסבלנות, וכותבים את התשובות בשפה מדעית, במשפטים שלמים.</li>
+      <li>בשאלות בחירה מסמנים X בריבוע שליד התשובה.</li>
+      <li>בשאלות שמבקשות "היעזרו בקטע" או "היעזרו בטבלה", התשובה מבוססת על המידע שמופיע במבדק, וגם על מה שלמדנו.</li>
+      <li>את התשובות כותבים בעצמכם. אי אפשר להדביק טקסט בשדות הכתיבה.</li>
+      <li>התשובות נשמרות אוטומטית. אם הדף נסגר, אפשר לחזור ולהמשיך.</li>
+      <li>מותר להשתמש במחשבון.</li>
+    </ul>
+  </div>
+  <div class="form" id="resumebox" style="display:none">
+    <p style="margin:0 0 10px">נמצא מבדק שהתחלת ולא הגשת.</p>
+    <button type="button" class="pill go" id="resume">המשך המבדק</button>
+    <button type="button" class="pill" id="fresh">התחלה מחדש</button>
+  </div>
+  <div class="form" id="startform">
+    <label class="t" for="nm">שם פרטי ואות (או שתיים) משם המשפחה</label>
+    <input class="txt" id="nm" type="text" autocomplete="off" maxlength="30" placeholder="למשל: דנה כ">
+    <p class="hint">לא צריך לכתוב שם משפחה מלא. רק האות הראשונה, או שתי אותיות אם יש עוד בכיתה שם פרטי כמו שלך.</p>
+    <div id="clrow">
+      <label class="t" for="cl">כיתה (אות וספרה, בלי סימנים)</label>
+      <input class="txt" id="cl" type="text" autocomplete="off" maxlength="4" placeholder="למשל: ח2">
+    </div>
+    <label style="display:flex;gap:10px;align-items:center;margin:10px 0 0;cursor:pointer"><input type="checkbox" id="isT" style="width:20px;height:20px;accent-color:var(--accent)"> אני מורה או מנחה ומנסה את המבדק</label>
+    <label class="t">הנוסח שלי</label>
+    <div class="vers" role="group" aria-label="בחירת נוסח">
+      <button type="button" class="pill" data-v="A">נוסח א</button>
+      <button type="button" class="pill" data-v="B">נוסח ב</button>
+    </div>
+    <p class="hint">המורה תגיד לכן איזה נוסח לבחור, לפי מקום הישיבה.</p>
+    <p class="err" id="err" role="alert"></p>
+    <button type="button" class="pill go" id="go">התחלת המבדק</button>
+  </div>
+</section>
+
+<section class="screen" id="s-exam">
+  <div id="exam"></div>
+  <div class="unit" id="u-4"><div class="hero" style="border-color:#c9e8d6;background:#eaf7ef"><img src="__IMG_party__" alt="דמות התא חוגגת עם קונפטי וגביע כוכב קטן"><div class="cap"><b>כמעט סיימת!</b><span>עוד כמה שאלות משוב והמבדק מוכן להגשה.</span></div></div>
+  <div class="cheer" id="cheer4"></div>
+  <div class="fbk" id="fbk">
+    <h3>כמה שאלות משוב</h3>
+    <p class="hint" style="margin:0 0 10px">לא חובה, וזה לא משפיע על הציון.</p>
+    <div class="lab">המבדק היה לי</div>
+    <div class="lv" id="lv">
+      <button type="button" class="pill" data-l="קל">קל</button>
+      <button type="button" class="pill" data-l="הוגן">הוגן</button>
+      <button type="button" class="pill" data-l="קשה">קשה</button>
+    </div>
+    <div class="lab">בשיעורי מדעים אני אוהבת ש...</div>
+    <textarea class="ans" data-fb="like" rows="2" aria-label="בשיעורי מדעים אני אוהבת ש"></textarea>
+    <div class="lab">בשיעורי מדעים אשמח ש...</div>
+    <textarea class="ans" data-fb="wish" rows="2" aria-label="בשיעורי מדעים אשמח ש"></textarea>
+    <div class="lab">פעילות או ניסוי שאהבתי במיוחד:</div>
+    <textarea class="ans" data-fb="activity" rows="2" aria-label="פעילות או ניסוי שאהבתי במיוחד"></textarea>
+  </div>
+  <div class="submitrow">
+    <button type="button" class="pill go" id="submit">הגשת המבדק</button>
+    <span class="msg" id="smsg" role="status"></span>
+  </div>
+  <div class="unitnav"><button type="button" class="pill" data-nav="-1">חזרה ליחידה 3</button></div>
+  </div>
+</section>
+
+<section class="screen" id="s-done">
+  <div class="done">
+    <img class="mascot" src="__IMG_party__" alt="דמות התא חוגגת">
+    <h2>המבדק הוגש</h2>
+    <p>התשובות שלך נקלטו. תודה!</p>
+    <p style="margin-top:26px">הקוד האישי שלך לצפייה במשוב:</p>
+    <p style="font-size:38px;font-weight:700;letter-spacing:6px;color:var(--accent);direction:ltr;margin:4px 0" id="mycode"></p>
+    <p class="hint">צלמי או רשמי את הקוד. אחרי שהמורה תבדוק ותפרסם, אפשר להיכנס עם הקוד ולקרוא משוב מפורט.</p>
+    <p id="reslink" class="hint"></p>
+  </div>
+</section>
+
+</main>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true">
+  <div class="box">
+    <p id="mtext"></p>
+    <button type="button" class="pill go" id="myes">כן, להגיש</button>
+    <button type="button" class="pill" id="mno">חזרה למבדק</button>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <span>נבנה על ידי <a href="https://chepti.com" target="_blank" rel="noopener">חולמים תקשוב</a></span>
+    <a class="pill spacer" href="mailto:teacher@example.com?subject=%D7%9E%D7%A9%D7%95%D7%91%3A%20%D7%9E%D7%91%D7%93%D7%A7%20%D7%94%D7%AA%D7%90" target="_blank" rel="noopener">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+      שליחת משוב
+    </a>
+  </div>
+</footer>
+
+<script>
+(function(){
+'use strict';
+var LS_KEY='cell-exam-8-v1';
+var $=function(id){return document.getElementById(id);};
+var S=null;            // מצב המבדק
+var EXAM=null;
+var dirty=false, submitted=false, timerH=null, saveH=null;
+
+function lsGet(){try{return JSON.parse(localStorage.getItem(LS_KEY)||'null');}catch(e){return null;}}
+function lsSet(){try{localStorage.setItem(LS_KEY,JSON.stringify(S));}catch(e){}}
+function lsClear(){try{localStorage.removeItem(LS_KEY);}catch(e){}}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+/* ---------- ערבוב אקראי יציב לפי מזהה הגשה ---------- */
+function hash(str){var h=1779033703^str.length;for(var i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=(h<<13)|(h>>>19);}return h>>>0;}
+function rng(seedStr){var a=hash(seedStr);return function(){a+=0x6D2B79F5;var t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
+function shuffled(arr,seedStr){var a=arr.slice(),r=rng(seedStr);for(var i=a.length-1;i>0;i--){var j=Math.floor(r()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+
+/* ---------- ציורים ---------- */
+function slugSVG(){
+  function chl(x,y,rot){
+    return '<g transform="translate('+x+' '+y+') rotate('+rot+')"><ellipse rx="46" ry="23" fill="#7bc96f" stroke="#2f7a2b" stroke-width="3"/>'+
+      '<rect x="-30" y="-9" width="14" height="18" rx="3" fill="#3f9a3a"/><rect x="-7" y="-9" width="14" height="18" rx="3" fill="#3f9a3a"/><rect x="16" y="-9" width="14" height="18" rx="3" fill="#3f9a3a"/></g>';
+  }
+  function mit(x,y,rot){
+    return '<g transform="translate('+x+' '+y+') rotate('+rot+')"><rect x="-38" y="-18" width="76" height="36" rx="18" fill="#f4a259" stroke="#b4631a" stroke-width="3"/>'+
+      '<path d="M-24 0 Q-16 -13 -9 0 T6 0 T22 0" fill="none" stroke="#b4631a" stroke-width="3" stroke-linecap="round"/></g>';
+  }
+  function lab(n,x,y,x2,y2){
+    return '<line x1="'+x+'" y1="'+y+'" x2="'+x2+'" y2="'+y2+'" stroke="#1c1c28" stroke-width="2"/><circle cx="'+x+'" cy="'+y+'" r="18" fill="#fff" stroke="#1c1c28" stroke-width="2.5"/><text x="'+x+'" y="'+(y+7)+'" text-anchor="middle" font-size="21" font-weight="700" fill="#1c1c28" font-family="Heebo,Arial,sans-serif">'+n+'</text>';
+  }
+  return '<svg viewBox="0 0 620 400" role="img" aria-label="תא ממערכת העיכול של שבלול הים ובו שלושה חלקים מסומנים במספרים 1, 2 ו-3">'+
+    '<ellipse cx="310" cy="205" rx="260" ry="150" fill="#fbf3e4" stroke="#5a4a35" stroke-width="5"/>'+
+    chl(165,150,-25)+chl(455,270,-20)+chl(185,282,15)+
+    mit(440,145,25)+mit(300,318,-8)+
+    '<circle cx="310" cy="205" r="55" fill="#d6def5" stroke="#3d3a8c" stroke-width="3"/><circle cx="324" cy="197" r="16" fill="#9aa6dd"/>'+
+    lab(1,310,30,310,150)+lab(2,58,66,138,138)+lab(3,562,66,462,130)+'</svg>';
+}
+function lineSVG(g){
+  var W=600,H=360,ml=70,mr=24,mt=28,mb=84,pw=W-ml-mr,ph=H-mt-mb;
+  var xmin=g.xs[0],xmax=g.xs[g.xs.length-1];
+  var X=function(v){return ml+(v-xmin)/(xmax-xmin)*pw;};
+  var Y=function(v){return mt+ph-(v-g.ymin)/(g.ymax-g.ymin)*ph;};
+  var ink='#1c1c28',grid='#e1e1ea';
+  var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(g.cap)+'" font-family="Heebo,Arial,sans-serif">';
+  for(var v=g.ymin;v<=g.ymax+1e-9;v+=g.ystep){var y=Y(v);s+='<line x1="'+ml+'" y1="'+y+'" x2="'+(W-mr)+'" y2="'+y+'" stroke="'+grid+'"/><text x="'+(ml-10)+'" y="'+(y+5)+'" text-anchor="end" font-size="15" fill="'+ink+'">'+v+'</text>';}
+  s+='<line x1="'+ml+'" y1="'+mt+'" x2="'+ml+'" y2="'+(mt+ph)+'" stroke="'+ink+'" stroke-width="2"/><line x1="'+ml+'" y1="'+(mt+ph)+'" x2="'+(W-mr)+'" y2="'+(mt+ph)+'" stroke="'+ink+'" stroke-width="2"/>';
+  g.xs.forEach(function(x){s+='<line x1="'+X(x)+'" y1="'+(mt+ph)+'" x2="'+X(x)+'" y2="'+(mt+ph+6)+'" stroke="'+ink+'" stroke-width="2"/><text x="'+X(x)+'" y="'+(mt+ph+24)+'" text-anchor="middle" font-size="15" fill="'+ink+'">'+x+'</text>';});
+  var cols=['#3d3a8c','#c2410c'];
+  g.series.forEach(function(se,si){
+    var pts=g.xs.map(function(x,i){return X(x)+','+Y(se.ys[i]);}).join(' ');
+    s+='<polyline points="'+pts+'" fill="none" stroke="'+cols[si]+'" stroke-width="3" stroke-linejoin="round"'+(se.style==='dash'?' stroke-dasharray="9 6"':'')+'/>';
+    g.xs.forEach(function(x,i){var cx=X(x),cy=Y(se.ys[i]);
+      s+= si===0 ? '<circle cx="'+cx+'" cy="'+cy+'" r="5.5" fill="'+cols[si]+'"/>' : '<rect x="'+(cx-5.5)+'" y="'+(cy-5.5)+'" width="11" height="11" fill="'+cols[si]+'"/>';});
+  });
+  s+='<text x="'+(ml+pw/2)+'" y="'+(H-34)+'" text-anchor="middle" font-size="16" font-weight="700" fill="'+ink+'">'+g.xt+'</text>';
+  s+='<text transform="translate(18 '+(mt+ph/2)+') rotate(-90)" text-anchor="middle" font-size="16" font-weight="700" fill="'+ink+'">'+g.yt+'</text>';
+  var lx=ml+pw/2-130;
+  g.series.forEach(function(se,si){var yy=H-10;var x0=lx+si*170;
+    s+='<line x1="'+x0+'" y1="'+(yy-5)+'" x2="'+(x0+34)+'" y2="'+(yy-5)+'" stroke="'+cols[si]+'" stroke-width="3"'+(se.style==='dash'?' stroke-dasharray="7 4"':'')+'/>'+
+       (si===0?'<circle cx="'+(x0+17)+'" cy="'+(yy-5)+'" r="5" fill="'+cols[si]+'"/>':'<rect x="'+(x0+12)+'" y="'+(yy-10)+'" width="10" height="10" fill="'+cols[si]+'"/>')+
+       '<text x="'+(x0+42)+'" y="'+yy+'" font-size="15" fill="'+ink+'">'+se.name+'</text>';});
+  return s+'</svg>';
+}
+
+/* ---------- בניית המבדק ---------- */
+function setAns(f,val){S.answers[f]=val;dirty=true;lsSet();if(typeof progress==='function')progress();}
+function guard(el,field){
+  function block(e){e.preventDefault();if(!S)return;S.events.paste=(S.events.paste||0)+1;lsSet();dirty=true;}
+  el.addEventListener('paste',block);
+  el.addEventListener('drop',block);
+  el.addEventListener('dragover',function(e){e.preventDefault();});
+  el.addEventListener('contextmenu',function(e){e.preventDefault();});
+  el.addEventListener('cut',function(e){e.preventDefault();});
+  el.addEventListener('copy',function(e){e.preventDefault();});
+  el.addEventListener('keydown',function(e){
+    var k=(e.key||'').toLowerCase();
+    if(((e.ctrlKey||e.metaKey)&&(k==='v'||k==='insert'))||(e.shiftKey&&k==='insert')) block(e);
+  });
+  el.addEventListener('beforeinput',function(e){
+    var t=e.inputType||'';
+    if(t==='insertFromPaste'||t==='insertFromDrop'||t==='insertFromYank'||t==='insertFromPasteAsQuotation') block(e);
+  });
+  el.addEventListener('input',function(e){
+    if(!S)return;
+    var t=e.inputType||'';
+    if(t.indexOf('insert')===0||t.indexOf('delete')===0){S.keys[field]=(S.keys[field]||0)+1;}
+    S.lens[field]=el.value.length;
+  });
+}
+function blockMC(b,qid){
+  var ord=shuffled(b.opts,S.sid+b.field);
+  var h='<div class="opts" role="group">';
+  ord.forEach(function(o,i){
+    var sel=S.answers[b.field]===o.id;
+    h+='<div class="row" data-f="'+b.field+'" data-o="'+o.id+'"><button type="button" class="sq'+(sel?' sel':'')+'" aria-label="סימון תשובה '+(i+1)+'" aria-pressed="'+sel+'">'+(sel?'X':'')+'</button><span class="num">'+(i+1)+'</span><span class="otxt">'+o.t+'</span></div>';
+  });
+  return h+'</div>';
+}
+function blockOpen(b){
+  return (b.label?'<div class="lab">'+b.label+'</div>':'')+'<textarea class="ans" data-f="'+b.field+'" rows="'+(b.rows||4)+'" aria-label="התשובה שלי" style="min-height:'+((b.rows||4)*34+16)+'px"></textarea>';
+}
+function blockCells(b){
+  var h='<div class="tblwrap"><table class="cells"><tr>'+b.head.map(function(x){return '<th>'+x+'</th>';}).join('')+'</tr>';
+  b.rows.forEach(function(r){
+    h+='<tr><td>'+r.label+'</td>'+r.cells.map(function(c){return '<td><input type="text" autocomplete="off" data-f="'+c.field+'"'+(c.kind==='num'?' inputmode="numeric"':'')+' aria-label="השלמה"></td>';}).join('')+'</tr>';
+  });
+  return h+'</table></div>';
+}
+function blockCloze(b){
+  var h='<div class="cloze">';
+  b.parts.forEach(function(p){
+    if(p.s!==undefined){h+=p.s+' ';}
+    else{
+      var ord=shuffled(p.opts,S.sid+p.field);
+      h+='<select class="cl" data-f="'+p.field+'" aria-label="בחירת מילה"><option value="">בחרי...</option>'+ord.map(function(o){return '<option value="'+o.id+'">'+o.t+'</option>';}).join('')+'</select> ';
+    }
+  });
+  return h+'</div>';
+}
+function blockMatrix(b){
+  var rows=shuffled(b.rows,S.sid+'mx'+b.rows[0].field);
+  var h='<div class="tblwrap"><table class="cells"><tr><th>הפריט</th>'+b.cols.map(function(c){return '<th>'+c.t+'</th>';}).join('')+'</tr>';
+  rows.forEach(function(r){
+    h+='<tr><td>'+r.t+'</td>'+b.cols.map(function(c){var sel=S.answers[r.field]===c.id;return '<td class="c"><button type="button" class="rad'+(sel?' sel':'')+'" data-f="'+r.field+'" data-o="'+c.id+'" aria-label="'+esc(r.t)+': '+c.t+'" aria-pressed="'+sel+'"></button></td>';}).join('')+'</tr>';
+  });
+  return h+'</table></div>';
+}
+function renderExam(){
+  var h='';
+  var UIMG={1:'__IMG_slug__',2:'__IMG_microscope__',3:'__IMG_runner__'};
+  EXAM.units.forEach(function(u,ui){
+    var inRead=false;
+    var rOpen=function(){if(inRead)return '';inRead=true;return '<div class="reading" role="group" aria-label="קטע קריאה"><div class="rh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"/></svg>קטע קריאה: התחלה</div><div class="rb">';};
+    var rClose=function(){if(!inRead)return '';inRead=false;return '</div><div class="rf">סוף קטע הקריאה</div></div>';};
+    h+='<section class="unit" id="u-'+u.n+'" data-unit="'+u.n+'"><div class="hero"><img src="'+UIMG[u.n]+'" alt=""><div class="cap"><b>יחידה '+u.n+': '+u.title+'</b><span>'+u.about+'</span></div></div><p class="read">קראו את קטעי המידע וענו על השאלות.</p>';
+    u.items.forEach(function(it){
+      if(it.t==='q'){h+=rClose();}else{h+=rOpen();}
+      if(it.t==='p'){h+='<div class="passage"><p>'+it.html+'</p></div>';}
+      else if(it.t==='fig'){h+='<figure>'+slugSVG()+'<figcaption>'+it.cap+'</figcaption></figure>';}
+      else if(it.t==='graph'){h+='<figure>'+lineSVG(it)+'<figcaption>'+it.cap+'</figcaption></figure>'+(it.note?'<p class="note" style="text-align:center">'+it.note+'</p>':'');}
+      else if(it.t==='table'){
+        h+='<p style="margin:14px 0 0;font-weight:700">'+it.cap+'</p><table class="data"><tr>'+it.head.map(function(x){return '<th>'+x+'</th>';}).join('')+'</tr>'+
+          it.rows.map(function(r){return '<tr>'+r.map(function(c,i){return '<td'+(i===0?' class="l"':'')+'>'+c+'</td>';}).join('')+'</tr>';}).join('')+'</table>'+(it.note?'<p class="note">'+it.note+'</p>':'');
+      }
+      else if(it.t==='q'){
+        h+='<div class="q" id="'+it.id+'" data-q="'+it.id+'"><div class="qn" aria-label="שאלה '+it.n+'">'+it.n+'</div><div class="qb"><p class="qt">'+it.stem+'</p>';
+        it.blocks.forEach(function(b){
+          if(b.k==='mc')h+=blockMC(b,it.id);else if(b.k==='open')h+=blockOpen(b);else if(b.k==='cells')h+=blockCells(b);
+          else if(b.k==='cloze')h+=blockCloze(b);else if(b.k==='matrix')h+=blockMatrix(b);
+        });
+        h+='</div></div>';
+      }
+    });
+    h+=rClose();
+    h+='<div class="cheer" id="cheer-'+u.n+'" role="status"></div>';
+    h+='<div class="unitnav">'+(ui>0?'<button type="button" class="pill" data-nav="-1">ליחידה הקודמת</button>':'<span></span>')+
+       '<button type="button" class="pill go" data-nav="1">'+(ui<EXAM.units.length-1?'ליחידה הבאה':'לשאלות המשוב ולהגשה')+'</button></div>';
+    h+='</section>';
+  });
+  $('exam').innerHTML=h;
+  // חיבור אירועים
+  var root=$('exam');
+  Array.prototype.forEach.call(root.querySelectorAll('textarea[data-f],input[data-f]'),function(el){
+    var f=el.getAttribute('data-f');
+    el.value=S.answers[f]||'';
+    guard(el,f);
+    el.addEventListener('input',function(){setAns(f,el.value);});
+  });
+  Array.prototype.forEach.call(root.querySelectorAll('select[data-f]'),function(el){
+    var f=el.getAttribute('data-f');
+    el.value=S.answers[f]||'';
+    el.addEventListener('change',function(){setAns(f,el.value);});
+  });
+  Array.prototype.forEach.call(root.querySelectorAll('.row[data-o]'),function(el){
+    el.addEventListener('click',function(){
+      var f=el.getAttribute('data-f'),o=el.getAttribute('data-o');
+      setAns(f,o);
+      Array.prototype.forEach.call(root.querySelectorAll('.row[data-f="'+f+'"]'),function(r){
+        var on=r.getAttribute('data-o')===o,b=r.querySelector('.sq');
+        b.className='sq'+(on?' sel':'');b.textContent=on?'X':'';b.setAttribute('aria-pressed',on);
+      });
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll('.rad'),function(el){
+    el.addEventListener('click',function(){
+      var f=el.getAttribute('data-f'),o=el.getAttribute('data-o');
+      setAns(f,o);
+      Array.prototype.forEach.call(root.querySelectorAll('.rad[data-f="'+f+'"]'),function(r){
+        var on=r.getAttribute('data-o')===o;r.className='rad'+(on?' sel':'');r.setAttribute('aria-pressed',on);
+      });
+    });
+  });
+  // משוב
+  Array.prototype.forEach.call($('fbk').querySelectorAll('textarea[data-fb]'),function(el){
+    var k=el.getAttribute('data-fb');el.value=(S.fb&&S.fb[k])||'';guard(el,'fb_'+k);
+    el.addEventListener('input',function(){S.fb[k]=el.value;dirty=true;lsSet();});
+  });
+  Array.prototype.forEach.call($('lv').querySelectorAll('.pill'),function(b){
+    if(S.fb.level===b.getAttribute('data-l'))b.classList.add('on');
+    b.addEventListener('click',function(){
+      S.fb.level=b.getAttribute('data-l');dirty=true;lsSet();progress();
+      Array.prototype.forEach.call($('lv').querySelectorAll('.pill'),function(x){x.classList.toggle('on',x===b);});
+    });
+  });
+}
+function qFields(it){
+  var fields=[];
+  it.blocks.forEach(function(b){
+    if(b.field)fields.push(b.field);
+    if(b.k==='cells')b.rows.forEach(function(r){r.cells.forEach(function(c){fields.push(c.field);});});
+    if(b.k==='cloze')b.parts.forEach(function(p){if(p.field)fields.push(p.field);});
+    if(b.k==='matrix')b.rows.forEach(function(r){fields.push(r.field);});
+  });
+  return fields;
+}
+function qDone(it){return qFields(it).every(function(f){return S.answers[f]&&String(S.answers[f]).trim();});}
+function missingQuestions(){
+  var miss=0;
+  EXAM.units.forEach(function(u){u.items.forEach(function(it){if(it.t==='q'&&!qDone(it))miss++;});});
+  return miss;
+}
+
+/* ---------- ציר התקדמות ולשוניות ---------- */
+var cur=1,CHEER={
+  1:'כל הכבוד! סיימת את היחידה הראשונה. עוד שתיים והגעת.',
+  2:'יפה מאוד! שתי יחידות מאחוריך. נשארה עוד אחת.',
+  3:'מעולה! סיימת את כל השאלות. נשארו רק שאלות המשוב וההגשה.'
+};
+var STN_LABEL={1:'שבלול הים',2:'כרומוזומים',3:'אתלט בהרים',4:'סיום והגשה'};
+var ICO_CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+var ICO_FLAG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V4"/><path d="M4 4h13l-2 4 2 4H4"/></svg>';
+function unitStats(){
+  return EXAM.units.map(function(u){
+    var qs=u.items.filter(function(it){return it.t==='q';});
+    var d=qs.filter(qDone).length;
+    return {n:u.n,done:d,total:qs.length};
+  });
+}
+function buildTrack(){
+  var h='<div class="stations">';
+  for(var i=1;i<=4;i++){h+='<button type="button" class="stn" data-stn="'+i+'" aria-label="'+(i<4?'יחידה '+i+': ':'')+STN_LABEL[i]+'"><span class="dotc">'+i+'</span><span class="lbl">'+STN_LABEL[i]+'</span></button>';}
+  h+='</div><div class="allbar" aria-hidden="true"><i id="allfill"></i></div><div class="allpct" id="allpct"></div>';
+  $('track').innerHTML=h;
+  Array.prototype.forEach.call($('track').querySelectorAll('.stn'),function(b){b.addEventListener('click',function(){showUnit(Number(b.getAttribute('data-stn')));});});
+}
+var progQ=false;
+function progress(){
+  if(progQ)return;progQ=true;
+  setTimeout(function(){progQ=false;doProgress();},60);
+}
+function doProgress(){
+  if(!EXAM||!S)return;
+  var st=unitStats(),tot=0,done=0;
+  st.forEach(function(u){tot+=u.total;done+=u.done;});
+  var allDone=st.every(function(u){return u.done===u.total;});
+  Array.prototype.forEach.call(document.querySelectorAll('.q'),function(q){
+    var id=q.getAttribute('data-q'),it=null;
+    EXAM.units.forEach(function(u){u.items.forEach(function(x){if(x.t==='q'&&x.id===id)it=x;});});
+    if(it)q.classList.toggle('answered',!!qDone(it));
+  });
+  Array.prototype.forEach.call($('track').querySelectorAll('.stn'),function(b){
+    var i=Number(b.getAttribute('data-stn')),dot=b.querySelector('.dotc'),u=st[i-1];
+    var cls='stn';
+    if(i===cur)cls+=' cur';
+    if(u){ if(u.done===u.total)cls+=' fin'; else if(u.done>0)cls+=' part'; b.style.setProperty('--fill',u.total?(u.done/u.total):0); dot.innerHTML=(u.done===u.total)?ICO_CHECK:i; }
+    else { if(allDone&&S.fb&&S.fb.level)cls+=' fin'; dot.innerHTML=(i===cur)?ICO_FLAG:i; b.style.setProperty('--fill',0); }
+    b.className=cls;
+  });
+  $('allfill').style.width=(tot?Math.round(done/tot*100):0)+'%';
+  $('allpct').textContent='ענית על '+done+' מתוך '+tot+' שאלות';
+  st.forEach(function(u){
+    var c=$('cheer-'+u.n);if(!c)return;
+    var on=u.total&&u.done===u.total;c.classList.toggle('on',!!on);if(on)c.textContent=CHEER[u.n];
+  });
+  var c4=$('cheer4');if(c4){if(allDone){c4.classList.add('on');c4.textContent='ענית על כל השאלות. אפשר להגיש.';}else c4.classList.remove('on');}
+}
+function showUnit(n){
+  var max=EXAM.units.length+1;n=Math.max(1,Math.min(max,n));cur=n;
+  if(S){S.cur=n;lsSet();}
+  for(var i=1;i<=max;i++){var el=$('u-'+i);if(el)el.classList.toggle('on',i===n);}
+  doProgress();window.scrollTo(0,0);
+}
+document.addEventListener('click',function(e){
+  var t=e.target;while(t&&t!==document&&!(t.getAttribute&&t.getAttribute('data-nav')))t=t.parentNode;
+  if(t&&t.getAttribute&&t.getAttribute('data-nav'))showUnit(cur+Number(t.getAttribute('data-nav')));
+});
+
+/* ---------- שרת ---------- */
+function payload(){
+  return {sid:S.sid,name:S.name,cls:S.cls,version:S.version,startedAt:S.startedAt,answers:S.answers,keys:S.keys,lens:S.lens,events:S.events,fb:S.fb};
+}
+function run(fn,arg,ok,fail){
+  if(!(window.google&&google.script&&google.script.run)){fail&&fail(new Error('אין חיבור לשרת'));return;}
+  google.script.run.withSuccessHandler(ok).withFailureHandler(fail||function(){})[fn](arg);
+}
+function autosave(){
+  if(!S||submitted||!dirty)return;
+  dirty=false;
+  run('saveDraft',payload(),function(){},function(){dirty=true;});
+}
+
+/* ---------- מסכים ---------- */
+function show(id){Array.prototype.forEach.call(document.querySelectorAll('.screen'),function(s){s.classList.toggle('on',s.id===id);});window.scrollTo(0,0);}
+function startTimer(){
+  clearInterval(timerH);
+  timerH=setInterval(function(){
+    var sec=Math.floor((Date.now()-S.startedAt)/1000),m=Math.floor(sec/60),s=sec%60;
+    $('timer').textContent=(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+  },1000);
+}
+function begin(){
+  $('hsub').textContent='מדע וטכנולוגיה, כיתה ח׳ · נוסח '+(S.version==='A'?'א':'ב');
+  renderExam();buildTrack();$('track').classList.add('on');show('s-exam');startTimer();
+  showUnit(S.cur||1);
+  clearInterval(saveH);saveH=setInterval(autosave,45000);
+  dirty=true;lsSet();autosave();
+}
+function loadExam(then){
+  $('err').textContent='';
+  $('go').disabled=true;$('go').textContent='טוען...';
+  run('getExam',S.version,function(ex){EXAM=ex;$('go').disabled=false;$('go').textContent='התחלת המבדק';then();},function(e){
+    $('go').disabled=false;$('go').textContent='התחלת המבדק';$('err').textContent='הטעינה נכשלה. בדקי חיבור לאינטרנט ונסי שוב.';
+  });
+}
+var chosen=null;
+Array.prototype.forEach.call(document.querySelectorAll('.vers .pill'),function(b){
+  b.addEventListener('click',function(){
+    chosen=b.getAttribute('data-v');
+    Array.prototype.forEach.call(document.querySelectorAll('.vers .pill'),function(x){x.classList.toggle('on',x===b);});
+  });
+});
+['nm','cl'].forEach(function(id){guard($(id),'start_'+id);});
+$('isT').addEventListener('change',function(){$('clrow').style.display=this.checked?'none':'block';});
+$('go').addEventListener('click',function(){
+  var nm=$('nm').value.replace(/[^א-תA-Za-z\s]/g,'').trim().replace(/\s+/g,' '),cl;
+  var parts=nm.split(' ');
+  if(parts.length!==2||parts[0].length<2||parts[1].length>2){$('err').textContent='נא לכתוב שם פרטי, רווח, ואות אחת או שתיים משם המשפחה. למשל: דנה כ';return;}
+  if($('isT').checked){cl='חולמים תקשוב';}
+  else{
+    var t=$('cl').value.replace(/[^א-ת0-9]/g,''),m=t.match(/^([א-ת])([0-9]{1,2})$/)||t.match(/^([0-9]{1,2})([א-ת])$/);
+    if(!m){$('err').textContent='הכיתה נכתבת כאות וספרה, בלי סימנים. למשל: ח2';return;}
+    cl=/^[א-ת]$/.test(m[1])?m[1]+m[2]:m[2]+m[1];
+  }
+  if(!chosen){$('err').textContent='נא לבחור נוסח (א או ב).';return;}
+  S={sid:'s'+Date.now().toString(36)+Math.random().toString(36).slice(2,8),name:nm,cls:cl,version:chosen,startedAt:Date.now(),answers:{},keys:{},lens:{},events:{blur:0,paste:0},fb:{}};
+  lsSet();
+  loadExam(begin);
+});
+$('resume').addEventListener('click',function(){
+  S=lsGet();if(!S)return;
+  S.keys=S.keys||{};S.lens=S.lens||{};S.events=S.events||{blur:0,paste:0};S.fb=S.fb||{};
+  loadExam(begin);
+});
+$('fresh').addEventListener('click',function(){lsClear();$('resumebox').style.display='none';$('startform').style.display='block';});
+
+var saved=lsGet();
+if(saved&&saved.sid&&saved.name&&saved.version&&Object.keys(saved.answers||{}).length){
+  $('resumebox').style.display='block';$('startform').style.display='none';
+}
+
+/* ---------- אירועי חלון ---------- */
+function leave(){if(S&&!submitted){S.events.blur=(S.events.blur||0)+1;dirty=true;lsSet();}}
+window.addEventListener('blur',leave);
+document.addEventListener('visibilitychange',function(){if(document.hidden){leave();autosave();}});
+window.addEventListener('pagehide',function(){dirty=true;autosave();});
+
+/* ---------- הגשה ---------- */
+function modal(text,yes){
+  $('mtext').textContent=text;$('modal').classList.add('on');
+  $('myes').onclick=function(){$('modal').classList.remove('on');yes();};
+  $('mno').onclick=function(){$('modal').classList.remove('on');};
+}
+function doSubmit(){
+  $('submit').disabled=true;$('smsg').textContent='שולחת את התשובות...';
+  run('submitExam',payload(),function(r){
+    if(r&&r.ok){submitted=true;clearInterval(timerH);clearInterval(saveH);lsClear();
+      $('mycode').textContent=r.code||'';$('track').classList.remove('on');
+      if(r.resultUrl){$('reslink').innerHTML='כתובת הצפייה במשוב: <a href="'+esc(r.resultUrl)+'" target="_blank" rel="noopener">'+esc(r.resultUrl)+'</a>';}
+      show('s-done');}
+    else{$('submit').disabled=false;$('smsg').textContent='ההגשה לא נקלטה'+(r&&r.error?': '+r.error:'')+'. נסי שוב.';}
+  },function(){$('submit').disabled=false;$('smsg').textContent='ההגשה לא נקלטה. בדקי חיבור לאינטרנט ולחצי שוב. התשובות שלך שמורות.';});
+}
+$('submit').addEventListener('click',function(){
+  var m=missingQuestions();
+  if(m>0)modal('ב-'+m+' שאלות יש תשובות חסרות. להגיש בכל זאת?',doSubmit);
+  else modal('להגיש את המבדק? אחרי ההגשה אי אפשר לשנות.',doSubmit);
+});
+})();
+</script>
+</body>
+</html>

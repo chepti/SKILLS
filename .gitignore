@@ -1,0 +1,6 @@
+﻿__pycache__/
+*.pyc
+*.local.txt
+upload-url.txt
+node_modules/
+.DS_Store
