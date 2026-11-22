@@ -230,6 +230,11 @@ function fieldRow(o,showLabel){
     var ad=document.createElement('button');ad.type='button';ad.className='pill sm';ad.style.marginTop='8px';ad.textContent='אימוץ ההצעה';
     ad.addEventListener('click',function(){o.score=o.sug;queueSave(o);renderCards(true);updateProgress();});
     sugBox.appendChild(ad);
+    if(o.sugNote){
+      var cp=document.createElement('button');cp.type='button';cp.className='pill sm';cp.style.cssText='margin-top:8px;margin-inline-start:6px';cp.textContent='העתקת ההערה למשוב';
+      cp.addEventListener('click',function(){var ta2=wrap.querySelector('textarea.fb');ta2.value=(ta2.value?ta2.value.replace(/\s*$/,' '):'')+o.sugNote;o.fb=ta2.value;queueSave(o);});
+      sugBox.appendChild(cp);
+    }
   }else{sugBox.className='sug';sugBox.style.background='#fafafa';sugBox.style.borderColor='var(--line)';sugBox.innerHTML='<span class="mut">אין עדיין הצעה מהסוכן.</span>';}
   var mine=document.createElement('div');mine.className='mine';
   var top=document.createElement('div');
