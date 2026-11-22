@@ -1,0 +1,17 @@
+{
+  "site_name": "שם האתר",
+  "audience": "students",
+  "allowed_emails": [],
+  "allowed_phones": [],
+  "allowed_hosts": [],
+  "student_names_file": "",
+  "facts_file": "FACTCHECK.md",
+  "terms_file": "TERMS.md",
+  "practice_answers_ok": false,
+  "protected_paths": [],
+  "keys_allow": [],
+  "auth": {
+    "teacher_paths": [],
+    "login_path": ""
+  }
+}
