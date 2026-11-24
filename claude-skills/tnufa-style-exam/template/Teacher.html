@@ -25,6 +25,22 @@ body{margin:0;color:var(--ink);font-family:var(--sans);font-size:16.5px;line-hei
 .st{font-size:14px;color:var(--ink-3);min-width:80px;}
 .prog{height:8px;border-radius:99px;background:var(--line);overflow:hidden;width:180px;}
 .prog i{display:block;height:100%;background:var(--ok);width:0;}
+.axis{background:#fff;border:1.5px solid var(--line);border-radius:18px;padding:12px 18px 10px;margin-bottom:16px;}
+.axis .stations{display:flex;align-items:flex-start;margin:2px 4px 0;}
+.axis .stn{flex:1;display:flex;flex-direction:column;align-items:center;position:relative;background:none;border:0;font:inherit;cursor:pointer;padding:0;color:var(--ink-3);}
+.axis .stn::before{content:"";position:absolute;top:16px;right:50%;width:100%;height:5px;background:var(--line);z-index:0;}
+.axis .stn::after{content:"";position:absolute;top:16px;right:50%;width:calc(var(--fill,0)*100%);height:5px;background:var(--ok);z-index:0;}
+.axis .stn:last-child::before,.axis .stn:last-child::after{display:none;}
+.axis .dotc{position:relative;z-index:1;width:38px;height:38px;border-radius:50%;border:3px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;}
+.axis .lbl{font-size:12.5px;line-height:1.3;margin-top:3px;text-align:center;}
+.axis .stn.part .dotc{border-color:var(--orange);color:var(--orange);}
+.axis .stn.fin .dotc{border-color:var(--ok);background:var(--ok);color:#fff;}
+.axis .stn.cur .dotc{box-shadow:0 0 0 5px #e4e3fa;border-color:var(--accent);}
+.axis .stn.cur.fin .dotc{border-color:var(--ok);}
+.axisbar{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:8px;}
+.axisbar i{display:block;height:100%;background:linear-gradient(90deg,var(--orange),var(--ok));transition:width .3s;}
+.axisline{font-size:14.5px;color:var(--ink-2);margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;align-items:baseline;}
+.axischeer{margin-inline-start:auto;color:var(--ok);font-weight:500;}
 .view{display:none;padding:22px 0 80px;} .view.on{display:block;}
 .grid{display:grid;grid-template-columns:260px 1fr;gap:22px;align-items:start;}
 @media(max-width:820px){.grid{grid-template-columns:1fr;}}
@@ -100,7 +116,9 @@ input.url{width:100%;border:1.5px solid var(--line);border-radius:10px;padding:6
 
 <main class="wrap">
   <section class="view on" id="v-grade">
+    <div class="axis" id="axis" aria-label="ציר התקדמות הבדיקה"></div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px">
+      <button class="pill go" id="nextTodo" title="קפיצה לתשובה הבאה שעוד לא נבדקה">לתשובה הבאה שלא נבדקה</button>
       <span class="mut">תצוגה:</span>
       <button class="pill on" data-mode="student">לפי תלמידה</button>
       <button class="pill" data-mode="question">לפי שאלה (כל התלמידות)</button>
@@ -209,7 +227,25 @@ function queueSave(o){
     });
   },700);
 }
-var CHIPS=['תשובה מלאה ומנומקת. כל הכבוד.','שימוש מדויק בנתונים מהקטע.','כדאי להשתמש במושגים מדעיים (למשל: כלורופלסט, מיטוזה).','חסר הסבר סיבתי: למה זה קורה?','כדאי לתמוך את התשובה בנתון מהטבלה או מהגרף.'];
+/* מאגר משפטי משוב: בכל כרטיס מוצעים 4 משפטים שונים, מהפחות בשימוש, כדי שלא יצא משוב זהה */
+var POOL={
+ 'חיזוק':['תשובה מלאה ומנומקת. כל הכבוד.','הסבר ברור ומדויק. ככה כותבים בשפה מדעית.','יפה מאוד, רואים שחשבת על זה לעומק.','תשובה טובה, את מבינה את הרעיון.','כתבת בצורה מסודרת וקלה להבנה.','עבודה יפה. התשובה מראה שאת יודעת את החומר.'],
+ 'נתונים':['שימוש מדויק בנתונים מהקטע.','כדאי לצטט מספר מהטבלה או מהגרף כדי לחזק את התשובה.','יפה שהשתמשת בנתון. כדאי להוסיף עוד אחד לתמיכה.','חסר נתון מהטבלה: חפשי איזה מספר מוכיח את הטענה.','נסי לכתוב את המספר עצמו ולא רק לציין שיש הבדל.'],
+ 'מושגים':['כדאי להשתמש במושגים מדעיים (למשל: כלורופלסט, מיטוזה).','נסי להחליף ניסוח יומיומי במושג מדעי מדויק.','שימוש טוב במושגים. אפשר להוסיף עוד מושג אחד שלמדנו.','בדקי שהשם המדעי של כל חלק כתוב נכון.','המושג הנכון כבר אצלך, ועכשיו כדאי להסביר מה הוא עושה.'],
+ 'הסבר':['חסר הסבר סיבתי: למה זה קורה?','כדאי לחבר בין הסיבה לתוצאה במילה "ולכן".','נסי להסביר בשלבים: קודם מה קורה, ואז למה זה משפיע.','התשובה מתארת מה קרה, ועכשיו כדאי להסביר מדוע.','חסרה חוליה אחת בשרשרת ההסבר. איזו?'],
+ 'השלמה':['התשובה נכונה אבל קצרה. כדאי להרחיב במשפט נוסף.','נסי לכתוב במשפטים שלמים, וזה יעזור לך לנמק.','כדאי לקרוא שוב את השאלה ולוודא שענית על כל חלקיה.','יש כאן רעיון טוב. כדאי להמשיך ולפתח אותו.','בפעם הבאה כדאי לסיים במשפט מסכם אחד.']
+};
+var CHIPUSE={};
+function pickChips(){
+  var out=[];
+  var cats=Object.keys(POOL).sort(function(){return Math.random()-.5;}).slice(0,4);
+  cats.forEach(function(c){
+    var arr=POOL[c],min=Math.min.apply(null,arr.map(function(t){return CHIPUSE[t]||0;}));
+    var cand=arr.filter(function(t){return (CHIPUSE[t]||0)===min;});
+    out.push(cand[Math.floor(Math.random()*cand.length)]);
+  });
+  return out;
+}
 
 function fieldRow(o,showLabel){
   var m=fmeta(o.sid,o.field);
@@ -249,7 +285,12 @@ function fieldRow(o,showLabel){
   ta.addEventListener('input',function(){o.fb=ta.value;queueSave(o);});
   mine.appendChild(ta);
   var ch=document.createElement('div');ch.className='chips';
-  CHIPS.forEach(function(t){var b=document.createElement('button');b.type='button';b.className='chip';b.textContent=t;b.addEventListener('click',function(){ta.value=(ta.value?ta.value.replace(/\s*$/,' '):'')+t;o.fb=ta.value;queueSave(o);});ch.appendChild(b);});
+  function fillChips(){
+    ch.innerHTML='';
+    pickChips().forEach(function(t){var b=document.createElement('button');b.type='button';b.className='chip';b.textContent=t;b.addEventListener('click',function(){CHIPUSE[t]=(CHIPUSE[t]||0)+1;ta.value=(ta.value?ta.value.replace(/\s*$/,' '):'')+t;o.fb=ta.value;queueSave(o);fillChips();});ch.appendChild(b);});
+    var rf=document.createElement('button');rf.type='button';rf.className='chip';rf.style.borderStyle='dashed';rf.textContent='רעיונות אחרים';rf.addEventListener('click',fillChips);ch.appendChild(rf);
+  }
+  fillChips();
   mine.appendChild(ch);
   row.appendChild(sugBox);row.appendChild(mine);wrap.appendChild(row);
   wrap._o=o;
@@ -281,6 +322,13 @@ function cardEl(g,withName){
   var flags=(s.paste>0?'<span class="flag">ניסיונות הדבקה: '+s.paste+'</span>':'');
   c.innerHTML='<h3><span class="tag">שאלה '+g.q.n+'</span>'+(withName?'<span>'+esc(s.name)+'</span><span class="tag">נוסח '+(s.ver==='A'?'א':'ב')+'</span>':'')+flags+'</h3><div class="stem">'+esc(g.q.stem)+'</div>';
   g.fields.forEach(function(o){c.appendChild(fieldRow(o));});
+  var pend=g.fields.filter(function(o){return o.sug!=null&&o.score==null;});
+  if(pend.length){
+    var h3=c.querySelector('h3'),ab=document.createElement('button');ab.type='button';ab.className='pill sm';ab.style.marginInlineStart='auto';
+    ab.textContent='אימוץ כל ההצעות בכרטיס';ab.title='מעתיק את הצעות הסוכן לכל התשובות שעוד לא נבדקו בכרטיס. אפשר לשנות אחר כך.';
+    ab.addEventListener('click',function(){pend.forEach(function(o){o.score=o.sug;queueSave(o);});renderCards(true);updateProgress();});
+    h3.appendChild(ab);
+  }
   return c;
 }
 function renderList(){
@@ -388,10 +436,54 @@ function openEditor(s,C,head){
     });
   });
 }
+var T0=Date.now(),BASE=null;
+var CHEER_AX=[[100,'סיימת! כל התשובות נבדקו. אפשר לעבור ללשונית "משובים לתלמידות".'],[75,'נשאר רבע אחרון. כמעט שם!'],[50,'חצי דרך. הקצב שלך מצוין.'],[25,'רבע מהדרך מאחוריך. ממשיכות.'],[0,'כל תשובה שנבדקת מקרבת אותך לסוף.']];
 function updateProgress(){
   var tot=D.open.length,done=D.open.filter(function(o){return o.score!=null;}).length,sug=D.open.filter(function(o){return o.sug!=null;}).length;
   $('pbar').style.width=(tot?done/tot*100:0)+'%';
   $('pst').textContent='נבדקו '+done+' מתוך '+tot+' · הצעות סוכן: '+sug;
+  if(BASE===null)BASE=done;
+  renderAxis(done,tot);
+}
+function qAxisData(){
+  var map={};
+  D.open.forEach(function(o){var m=fmeta(o.sid,o.field);var q=map[m.qid]||(map[m.qid]={qid:m.qid,n:m.n,done:0,total:0});q.total++;if(o.score!=null)q.done++;});
+  return Object.keys(map).map(function(k){return map[k];}).sort(function(a,b){return a.n-b.n;});
+}
+function renderAxis(done,tot){
+  var el=$('axis');if(!el)return;
+  var qs=qAxisData(),pct=tot?Math.round(done/tot*100):0;
+  var h='<div class="stations">'+qs.map(function(q){
+    var cls='stn'+(q.done===q.total&&q.total?' fin':(q.done>0?' part':''))+((mode==='question'&&selQ===q.qid)?' cur':'');
+    return '<button type="button" class="'+cls+'" data-axq="'+q.qid+'" style="--fill:'+(q.total?q.done/q.total:0)+'" title="מעבר לבדיקת שאלה '+q.n+'"><span class="dotc">'+(q.done===q.total&&q.total?'&#10003;':q.n)+'</span><span class="lbl">שאלה '+q.n+'<br>'+q.done+'/'+q.total+'</span></button>';
+  }).join('')+'</div>';
+  var mins=(Date.now()-T0)/60000,gained=done-BASE,eta='';
+  if(gained>=6&&mins>1&&done<tot){var rem=Math.round((tot-done)/(gained/mins));eta=' · בקצב הנוכחי נשארו כ-'+(rem>=60?Math.floor(rem/60)+' שעות ו-'+(rem%60)+' דקות':rem+' דקות');}
+  var cheer=CHEER_AX.filter(function(c){return pct>=c[0];})[0][1];
+  h+='<div class="axisbar"><i style="width:'+pct+'%"></i></div><div class="axisline"><b>'+pct+'%</b> · נבדקו '+done+' מתוך '+tot+eta+'<span class="axischeer">'+cheer+'</span></div>';
+  el.innerHTML=h;
+  Array.prototype.forEach.call(el.querySelectorAll('[data-axq]'),function(b){
+    b.addEventListener('click',function(){
+      mode='question';selQ=b.getAttribute('data-axq');
+      Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'),function(x){x.classList.toggle('on',x.getAttribute('data-mode')==='question');});
+      renderList();renderCards();renderAxis(done,tot);window.scrollTo(0,0);
+    });
+  });
+}
+function gotoNextTodo(){
+  var fields=[].slice.call(document.querySelectorAll('#cards .field')).filter(function(w){return w._o&&w._o.score==null;});
+  var after=fields.filter(function(w){return w.getBoundingClientRect().top>140;});
+  var target=after[0]||fields[0];
+  if(target){target.scrollIntoView({behavior:'smooth',block:'center'});var ta=target.querySelector('textarea');if(ta)setTimeout(function(){ta.focus({preventScroll:true});},350);return;}
+  // אין עוד בכרטיסים המוצגים: למצוא תלמידה או שאלה הבאה עם מה לבדוק
+  if(mode==='student'){
+    var idx=D.subs.findIndex(function(x){return x.sid===selSid;}),n=D.subs.length;
+    for(var i=1;i<=n;i++){var s=D.subs[(idx+i)%n];if(BYSID[s.sid].open.some(function(o){return o.score==null;})){selSid=s.sid;renderList();renderCards();window.scrollTo(0,0);return;}}
+  }else{
+    var q=qAxisData().filter(function(x){return x.done<x.total;})[0];
+    if(q){selQ=q.qid;renderList();renderCards();window.scrollTo(0,0);return;}
+  }
+  $('sst').textContent='אין עוד תשובות שממתינות לבדיקה';
 }
 
 /* ---------- תמונה כיתתית ---------- */
@@ -538,12 +630,13 @@ Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'),function(b
   b.addEventListener('click',function(){
     mode=b.getAttribute('data-mode');
     Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'),function(x){x.classList.toggle('on',x===b);});
-    $('modehint').textContent=mode==='question'?'בדיקה לפי שאלה מהירה יותר: אותה תבחינים לכל התלמידות ברצף.':'';
-    renderList();renderCards();
+    $('modehint').textContent=mode==='question'?'בדיקה לפי שאלה מהירה יותר: אותם תבחינים לכל התלמידות ברצף.':'';
+    renderList();renderCards();updateProgress();
   });
 });
 $('onlyTodo').addEventListener('change',function(){onlyTodo=this.checked;renderCards();});
 $('refresh').addEventListener('click',load);
+$('nextTodo').addEventListener('click',gotoNextTodo);
 $('showRem').addEventListener('change',function(){showRem=this.checked;applyFilter();selSid=D.subs.length?D.subs[0].sid:null;renderAll();});
 $('clsSel').addEventListener('change',function(){clsFilter=this.value;applyFilter();selSid=D.subs.length?D.subs[0].sid:null;selQ=null;renderAll();});
 load();
