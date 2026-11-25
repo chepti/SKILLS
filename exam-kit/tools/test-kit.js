@@ -48,9 +48,9 @@ const ctx = {
   PropertiesService: { getScriptProperties: () => ({ getProperty: k => props[k] || null, setProperty: (k, v) => { props[k] = v; } }) },
   SpreadsheetApp: { getActiveSpreadsheet: () => ss, openById: () => ss, getUi: () => ui, newDataValidation: () => permissive({ requireValueInList: () => permissive({ build: () => ({}) }) }) },
   LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
-  Utilities: { getUuid: () => crypto.randomUUID() },
+  Utilities: { getUuid: () => crypto.randomUUID(), sleep: () => {} },
   ScriptApp: { getService: () => ({ getUrl: () => 'https://script.example/exec' }) },
-  UrlFetchApp: { fetch: (url, o) => { fetchLog.push({ url, o }); const body = JSON.parse(o.payload); const userTxt = body.contents[0].parts[0].text; const arr = JSON.parse(userTxt.slice(userTxt.lastIndexOf('(JSON):\n') + 8)); const out = arr.map(x => ({ id: x.id, score: 7, note: 'הסברת נכון. כדאי להוסיף פרט.' })); return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(out) }] } }] }) }; } },
+  UrlFetchApp: { fetch: (url, o) => { fetchLog.push({ url, o }); if (global.__failFn) { const c = global.__failFn(url); if (c) return { getResponseCode: () => c, getContentText: () => JSON.stringify({ error: { message: 'simulated ' + c } }) }; } const body = JSON.parse(o.payload); const userTxt = body.contents[0].parts[0].text; const arr = JSON.parse(userTxt.slice(userTxt.lastIndexOf('(JSON):\n') + 8)); const out = arr.map(x => ({ id: x.id, score: 7, note: 'הסברת נכון. כדאי להוסיף פרט.' })); return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(out) }] } }] }) }; } },
   ContentService: {}, HtmlService: {},
 };
 vm.createContext(ctx);
@@ -119,6 +119,19 @@ const sugRows = sheets['תשובות פתוחות'].rows.slice(1).filter(r => r[
 ok(sugRows.length > 0 && sugRows.some(r => r[9] === 0 && /לא כתבת/.test(r[10])), 'הצעות נכתבו, ותשובה ריקה קיבלה 0 בלי קריאה');
 let loops = 0, rem = 1; while (rem > 0 && loops++ < 20) { const g = call("geminiBatch_({cls:'ח2'})"); rem = g.remaining; if (!g.processed) break; }
 ok(rem === 0, 'הלולאה מסיימת את כל ההמתנות');
+
+// ---------- עמידות: עומס ודגם גיבוי ----------
+const probe = "geminiPost_({contents:[{parts:[{text:'x (JSON):\\n[]'}]}]})";
+let n503 = 0; global.__failFn = () => (n503++ < 2 ? 503 : 0);
+let r = null; try { r = call(probe); } catch (e) { r = null; }
+ok(r && r.candidates && n503 === 3, 'שני כשלי 503 ואז הצלחה באותו דגם');
+global.__failFn = url => (url.includes('gemini-2.5-flash') ? 0 : 503);
+sheets['הגדרות'].rows.forEach(rw => { if (rw[0] === 'דגם' || /דגם Gemini/.test(String(rw[0]))) rw[1] = 'gemini-main-x'; });
+fetchLog.length = 0; let r2 = null; try { r2 = call(probe); } catch (e) { r2 = null; }
+ok(r2 && fetchLog.some(f => f.url.includes('gemini-2.5-flash')), 'מעבר לדגם גיבוי כשהראשי עמוס');
+global.__failFn = () => 503; let msg = ''; try { call(probe); } catch (e) { msg = String(e.message || e); }
+ok(/עמוס/.test(msg), 'הודעת עומס בעברית אחרי כל הניסיונות');
+global.__failFn = null;
 
 // ---------- פרסום ומשוב ----------
 call(`tPublish('${props.ADMIN_KEY}',['S1'],true,null)`);

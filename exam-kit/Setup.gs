@@ -27,6 +27,15 @@ function setSetting_(label, value) {
   return false;
 }
 
+/** מוסיף שורת הגדרה בסוף הלשונית אם אינה קיימת (בלי לשנות הגדרות קיימות). */
+function ensureSetting_(label, value, help) {
+  var sh = ss_().getSheetByName(SETTINGS_SHEET);
+  if (!sh) return;
+  var vals = sh.getRange(1, 1, Math.max(sh.getLastRow(), 1), 1).getValues();
+  for (var i = 0; i < vals.length; i++) if (String(vals[i][0]).trim() === label) return;
+  sh.getRange(sh.getLastRow() + 1, 1, 1, 3).setValues([[label, value, help]]);
+}
+
 /** טבלת הנוסחים: קוד | שם מוצג | קבוצה | קוד גישה */
 function versions_() {
   var sh = ss_().getSheetByName(SETTINGS_SHEET);
@@ -129,6 +138,9 @@ function setupAll() {
   ensureSheet_(ss, 'טיוטות', ['מזהה', 'שם', 'נוסח', 'עודכן', 'תשובות (JSON)']);
   ensureSheet_(ss, 'דוח בדיקה', ['נוסח', 'הערה']);
   writeGuide_(ss);
+  // הגדרות שנוספו אחרי שהגיליון כבר הותקן: מוסיפים בסוף, בלי לשנות דבר קיים
+  ensureSetting_('אימייל למשוב', '', 'אופציונלי: אם מוזן, מוצג בתחתית דף התלמידות כפתור "שליחת משוב" לכתובת הזו');
+  ensureSetting_('דגם גיבוי', 'gemini-2.5-flash', 'אם הדגם הראשי עמוס או לא זמין, המערכת תנסה את הדגם הזה (אפשר לרוקן כדי לבטל)');
   var s0 = ss.getSheetByName('Sheet1') || ss.getSheetByName('גיליון1');
   if (s0 && ss.getSheets().length > 1 && s0.getLastRow() === 0) ss.deleteSheet(s0);
   refreshStart();
@@ -250,17 +262,30 @@ function clearTestData() {
 function geminiKey_() { return getSetting_('מפתח API של Gemini'); }
 function geminiModel_() { return getSetting_('דגם Gemini') || 'gemini-2.5-flash'; }
 
+/**
+ * שולח בקשה ל-Gemini. כשהשירות עמוס (429, 500, 503) מנסה שוב עם המתנה, ואם הוגדר "דגם גיבוי" עובר אליו.
+ */
 function geminiPost_(body) {
   var key = geminiKey_();
   if (!key) throw new Error('חסר מפתח API. יש להדביק אותו בתא הצהוב בלשונית "הגדרות".');
-  var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(geminiModel_()) + ':generateContent';
-  var resp = UrlFetchApp.fetch(url, { method: 'post', contentType: 'application/json', headers: { 'x-goog-api-key': key }, payload: JSON.stringify(body), muteHttpExceptions: true });
-  var code = resp.getResponseCode(), txt = resp.getContentText();
-  if (code !== 200) {
-    var msg = ''; try { msg = JSON.parse(txt).error.message; } catch (e) { msg = txt.slice(0, 200); }
-    throw new Error('Gemini החזיר שגיאה ' + code + ': ' + String(msg).replace(key, '***'));
+  var models = [geminiModel_()], backup = getSetting_('דגם גיבוי');
+  if (backup && backup !== models[0]) models.push(backup);
+  var lastErr = '', waits = [2000, 6000, 12000];
+  for (var mi = 0; mi < models.length; mi++) {
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(models[mi]) + ':generateContent';
+    for (var attempt = 0; attempt <= waits.length; attempt++) {
+      var resp = UrlFetchApp.fetch(url, { method: 'post', contentType: 'application/json', headers: { 'x-goog-api-key': key }, payload: JSON.stringify(body), muteHttpExceptions: true });
+      var code = resp.getResponseCode(), txt = resp.getContentText();
+      if (code === 200) return JSON.parse(txt);
+      var msg = ''; try { msg = JSON.parse(txt).error.message; } catch (e) { msg = txt.slice(0, 200); }
+      msg = String(msg).replace(key, '***');
+      lastErr = models[mi] + ': ' + code + ' ' + msg;
+      if (code === 429 || code >= 500) { if (attempt < waits.length) Utilities.sleep(waits[attempt]); continue; }
+      if (code === 404 && mi < models.length - 1) break; // הדגם לא קיים: עוברים לגיבוי
+      throw new Error('Gemini החזיר שגיאה ' + code + ' (' + models[mi] + '): ' + msg);
+    }
   }
-  return JSON.parse(txt);
+  throw new Error('Gemini עמוס כרגע, ולא הצליח גם אחרי ניסיונות חוזרים' + (models.length > 1 ? ' ובדגם הגיבוי' : '') + ' (' + lastErr + '). אפשר ללחוץ שוב בעוד כמה דקות: ההצעות שכבר נוצרו נשמרות, והעבודה ממשיכה מאותה נקודה.' + (models.length < 2 ? ' כדאי להגדיר "דגם גיבוי" בלשונית "הגדרות".' : ''));
 }
 
 function testGemini() {
