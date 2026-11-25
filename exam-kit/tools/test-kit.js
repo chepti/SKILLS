@@ -50,7 +50,7 @@ const ctx = {
   LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
   Utilities: { getUuid: () => crypto.randomUUID(), sleep: () => {} },
   ScriptApp: { getService: () => ({ getUrl: () => 'https://script.example/exec' }) },
-  UrlFetchApp: { fetch: (url, o) => { fetchLog.push({ url, o }); if (global.__failFn) { const c = global.__failFn(url); if (c) return { getResponseCode: () => c, getContentText: () => JSON.stringify({ error: { message: 'simulated ' + c } }) }; } const body = JSON.parse(o.payload); const userTxt = body.contents[0].parts[0].text; const arr = JSON.parse(userTxt.slice(userTxt.lastIndexOf('(JSON):\n') + 8)); const out = arr.map(x => ({ id: x.id, score: 7, note: 'הסברת נכון. כדאי להוסיף פרט.' })); return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(out) }] } }] }) }; } },
+  UrlFetchApp: { fetch: (url, o) => { fetchLog.push({ url, o }); if (/\/models\?/.test(url)) return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ models: [{ name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] }, { name: 'models/gemini-3.8-flash', supportedGenerationMethods: ['generateContent'] }, { name: 'models/gemini-3.8-flash-lite', supportedGenerationMethods: ['generateContent'] }] }) }; if (global.__failFn) { const c = global.__failFn(url); if (c) return { getResponseCode: () => c, getContentText: () => JSON.stringify({ error: { message: 'simulated ' + c } }) }; } const body = JSON.parse(o.payload); const userTxt = body.contents[0].parts[0].text; const arr = JSON.parse(userTxt.slice(userTxt.lastIndexOf('(JSON):\n') + 8)); const out = arr.map(x => ({ id: x.id, score: 7, note: 'הסברת נכון. כדאי להוסיף פרט.' })); return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(out) }] } }] }) }; } },
   ContentService: {}, HtmlService: {},
 };
 vm.createContext(ctx);
@@ -131,6 +131,9 @@ fetchLog.length = 0; let r2 = null; try { r2 = call(probe); } catch (e) { r2 = n
 ok(r2 && fetchLog.some(f => f.url.includes('gemini-2.5-flash')), 'מעבר לדגם גיבוי כשהראשי עמוס');
 global.__failFn = () => 503; let msg = ''; try { call(probe); } catch (e) { msg = String(e.message || e); }
 ok(/עמוס/.test(msg), 'הודעת עומס בעברית אחרי כל הניסיונות');
+global.__failFn = url => (url.includes('gemini-3.8-flash:') ? 0 : 404);
+fetchLog.length = 0; let r3 = null; try { r3 = call(probe); } catch (e) { r3 = null; }
+ok(r3 && fetchLog.some(f => f.url.includes('gemini-3.8-flash:')), 'דגם מוגדר נדחה: מגלים דגם זמין (3.8) ועוברים אליו');
 global.__failFn = null;
 
 // ---------- פרסום ומשוב ----------

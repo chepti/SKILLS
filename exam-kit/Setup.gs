@@ -265,11 +265,23 @@ function geminiModel_() { return getSetting_('דגם Gemini') || 'gemini-2.5-fla
 /**
  * שולח בקשה ל-Gemini. כשהשירות עמוס (429, 500, 503) מנסה שוב עם המתנה, ואם הוגדר "דגם גיבוי" עובר אליו.
  */
-function geminiPost_(body) {
+/** דגמי flash שהמפתח רשאי להשתמש בהם, החדש ביותר ראשון. */
+function geminiAvailable_(key) {
+  var r = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': key }, muteHttpExceptions: true });
+  if (r.getResponseCode() !== 200) return [];
+  var list = (JSON.parse(r.getContentText()).models || []).filter(function (m) {
+    return /flash/i.test(m.name) && !/(lite|image|tts|live|audio|preview-)/i.test(m.name) && (m.supportedGenerationMethods || []).indexOf('generateContent') >= 0;
+  }).map(function (m) { return String(m.name).replace(/^models\//, ''); });
+  function ver(n) { var x = n.match(/(\d+(?:\.\d+)?)/); return x ? parseFloat(x[1]) : 0; }
+  return list.sort(function (a, b) { return ver(b) - ver(a); });
+}
+
+function geminiPost_(body, onlyModels) {
   var key = geminiKey_();
   if (!key) throw new Error('חסר מפתח API. יש להדביק אותו בתא הצהוב בלשונית "הגדרות".');
-  var models = [geminiModel_()], backup = getSetting_('דגם גיבוי');
-  if (backup && backup !== models[0]) models.push(backup);
+  var auto = !!onlyModels, unusable = false, lastBad = '';
+  var models = onlyModels || [geminiModel_()], backup = getSetting_('דגם גיבוי');
+  if (!onlyModels && backup && backup !== models[0]) models.push(backup);
   var lastErr = '', waits = [2000, 6000, 12000];
   for (var mi = 0; mi < models.length; mi++) {
     var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(models[mi]) + ':generateContent';
@@ -281,10 +293,17 @@ function geminiPost_(body) {
       msg = String(msg).replace(key, '***');
       lastErr = models[mi] + ': ' + code + ' ' + msg;
       if (code === 429 || code >= 500) { if (attempt < waits.length) Utilities.sleep(waits[attempt]); continue; }
-      if (code === 404 && mi < models.length - 1) break; // הדגם לא קיים: עוברים לגיבוי
+      if (code === 400 || code === 403 || code === 404) { unusable = true; lastBad = 'Gemini החזיר שגיאה ' + code + ' (' + models[mi] + '): ' + msg; break; } // הדגם לא קיים או לא זמין למפתח
       throw new Error('Gemini החזיר שגיאה ' + code + ' (' + models[mi] + '): ' + msg);
     }
   }
+  if (unusable && !auto) {
+    // אף דגם מוגדר לא עבד: מחפשים דגם flash זמין למפתח הזה ומנסים אותו
+    var found = geminiAvailable_(key).filter(function (m) { return models.indexOf(m) < 0; }).slice(0, 2);
+    if (found.length) { return geminiPost_(body, found); }
+    throw new Error(lastBad + '. לא נמצא למפתח הזה דגם זמין: בתפריט "בדיקת חיבור" רואים את הרשימה.');
+  }
+  if (unusable && !lastErr.match(/ 5\d\d | 429 /)) throw new Error(lastBad);
   throw new Error('Gemini עמוס כרגע, ולא הצליח גם אחרי ניסיונות חוזרים' + (models.length > 1 ? ' ובדגם הגיבוי' : '') + ' (' + lastErr + '). אפשר ללחוץ שוב בעוד כמה דקות: ההצעות שכבר נוצרו נשמרות, והעבודה ממשיכה מאותה נקודה.' + (models.length < 2 ? ' כדאי להגדיר "דגם גיבוי" בלשונית "הגדרות".' : ''));
 }
 
