@@ -722,8 +722,10 @@ function runGemini(){
     run('tGemini',[KEY,{cls:clsFilter==='*'?'':clsFilter}],function(r){
       if(!r||!r.ok){btn.disabled=false;$('gemSt').textContent='שגיאה: '+((r&&r.error)||'לא ידועה');return;}
       total+=r.processed;$('gemSt').textContent='נוצרו הצעות ל-'+total+' תשובות'+(r.remaining>0?' · נשארו '+r.remaining:'');
-      if(r.remaining>0&&r.processed>0)step();else{btn.disabled=false;$('gemSt').textContent='סיום: הצעות ל-'+total+' תשובות. מרעננת...';load();}
-    },function(){btn.disabled=false;$('gemSt').textContent='שגיאה בחיבור. אפשר ללחוץ שוב להמשך.';});
+      if(r.remaining>0&&r.processed>0)step();
+      else if(r.remaining>0){btn.disabled=false;$('gemSt').textContent='לא נשמרו הצעות ל-'+r.remaining+' תשובות'+(r.error?': '+r.error:'')+'. אפשר ללחוץ שוב.';load();}
+      else{btn.disabled=false;$('gemSt').textContent='סיום: הצעות ל-'+total+' תשובות. מרעננת...';load();}
+    },function(){btn.disabled=false;$('gemSt').textContent='הבקשה נכשלה או נקטעה (ייתכן שהשירות עמוס). אפשר ללחוץ שוב להמשך.';load();});
   }
   step();
 }

@@ -374,8 +374,15 @@ function geminiBatch_(opts) {
     var results = gemini_(toAsk, ctx, ex);
     results.forEach(function (r) { var p = map[r.id]; if (p) out.push({ sid: p.sid, field: p.field, score: r.score, note: r.note }); });
   }
-  if (out.length) suggest_(out);
-  return { processed: out.length, remaining: pend.length - batch.length };
+  var saved = 0, firstErr = '';
+  if (out.length) {
+    var sr = suggest_(out);
+    (sr.results || []).forEach(function (x) { if (x.ok) saved++; else if (!firstErr) firstErr = x.error || 'שמירה נכשלה'; });
+  }
+  var missing = batch.length - out.length; // Gemini לא החזיר תשובה לחלק מהפריטים
+  if (!saved && !firstErr) firstErr = toAsk.length ? 'Gemini לא החזיר הצעות תקינות לתשובות האלה' : '';
+  // תשובות שלא נשמרה להן הצעה יחזרו להמתין; כדי לא להסתובב בלולאה, נחזיר processed רק למה שנשמר באמת
+  return { processed: saved, remaining: pend.length - saved, asked: batch.length, missing: missing, error: firstErr };
 }
 
 /** לשימוש לוח המורה: כל קריאה מעבדת עד 12 תשובות. */
