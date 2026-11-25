@@ -63,6 +63,7 @@ function onOpen() {
   SpreadsheetApp.getUi().createMenu('מבדק')
     .addItem('1. התקנה ראשונה', 'setupAll')
     .addItem('בדיקת תקינות השאלון', 'validateContentMenu')
+    .addItem('הוספת תמונה (ראשית ליחידה או איור)', 'openImageDialog')
     .addItem('הצגת קישורים וקודים', 'refreshStart')
     .addSeparator()
     .addItem('בדיקת חיבור ל-Gemini', 'testGemini')

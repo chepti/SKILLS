@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="he" dir="rtl"><head><meta charset="utf-8">
+<style>
+body{font-family:Rubik,Arial,sans-serif;margin:0;padding:18px;color:#222;background:#fff}
+h3{margin:0 0 6px;font-size:17px}
+p{margin:4px 0 12px;color:#555;font-size:13px}
+label{display:block;font-weight:600;margin:12px 0 4px;font-size:13px}
+select,input[type=file]{width:100%;box-sizing:border-box;padding:8px;border:1px solid #bbb;border-radius:10px;font-size:13px;background:#fff}
+button{border:0;border-radius:999px;padding:10px 22px;font-size:14px;font-weight:600;cursor:pointer;background:#e8743b;color:#fff;margin-top:14px}
+button:disabled{opacity:.5;cursor:default}
+#prev{margin-top:12px;max-width:100%;max-height:200px;border-radius:12px;display:none;border:1px solid #ddd}
+#st{margin-top:10px;font-size:13px;min-height:18px}
+.ok{color:#1b7a4b}.err{color:#b3261e}
+</style></head><body>
+<h3>הוספת תמונה</h3>
+<p>בחרי איפה התמונה תופיע, ואת הקובץ מהמחשב (jpg, png או webp). התמונה מוקטנת אוטומטית.</p>
+<label for="tg">איפה?</label>
+<select id="tg"><option>טוען...</option></select>
+<label for="fl">קובץ</label>
+<input id="fl" type="file" accept="image/jpeg,image/png,image/webp">
+<img id="prev" alt="תצוגה מקדימה">
+<div><button id="go" disabled>העלאה</button></div>
+<div id="st"></div>
+<script>
+var data=null,$=function(i){return document.getElementById(i)};
+function setSt(t,c){var s=$('st');s.textContent=t;s.className=c||''}
+google.script.run.withSuccessHandler(function(list){
+  var s=$('tg');s.innerHTML='';
+  if(!list.length){s.innerHTML='<option value="">אין יחידות או איורים בלשונית השאלון</option>';return}
+  list.forEach(function(t){var o=document.createElement('option');o.value=t.row;o.textContent=(t.has?'✓ ':'')+t.label;s.appendChild(o)});
+}).withFailureHandler(function(e){setSt(String(e.message||e),'err')}).imageTargets();
+$('fl').addEventListener('change',function(){
+  var f=this.files[0];data=null;$('go').disabled=true;$('prev').style.display='none';
+  if(!f)return;
+  var img=new Image(),url=URL.createObjectURL(f);
+  img.onload=function(){
+    var max=900,w=img.width,h=img.height,k=Math.min(1,max/Math.max(w,h));
+    var c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(h*k);
+    var x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);
+    data=c.toDataURL('image/jpeg',0.82);$('prev').src=data;$('prev').style.display='block';$('go').disabled=false;setSt('');URL.revokeObjectURL(url);
+  };
+  img.onerror=function(){setSt('לא הצלחתי לקרוא את הקובץ כתמונה.','err')};
+  img.src=url;
+});
+$('go').addEventListener('click',function(){
+  var row=Number($('tg').value);if(!row||!data)return;
+  $('go').disabled=true;setSt('מעלה...');
+  google.script.run.withSuccessHandler(function(){
+    setSt('התמונה נשמרה. אפשר לבחור מקום נוסף.','ok');
+    var o=$('tg').selectedOptions[0];if(o&&o.textContent.indexOf('✓')!==0)o.textContent='✓ '+o.textContent;
+    $('fl').value='';data=null;$('prev').style.display='none';
+  }).withFailureHandler(function(e){setSt(String(e.message||e),'err');$('go').disabled=false}).saveImage(row,data);
+});
+</script></body></html>

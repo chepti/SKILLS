@@ -68,7 +68,7 @@ function parseContent_(values, ver) {
     var text = s_(cell(r, 'טקסט')), det = s_(cell(r, 'פרטים'));
 
     if (kind === 'יחידה') {
-      cur = { n: Number(cell(r, 'מספר')) || units.length + 1, title: text || ('יחידה ' + (units.length + 1)), about: det, image: s_(cell(r, 'תמונה')), items: [] };
+      cur = { n: Number(cell(r, 'מספר')) || units.length + 1, title: text || ('יחידה ' + (units.length + 1)), about: det, image: resolveImg_(cell(r, 'תמונה')), items: [] };
       units.push(cur);
       return;
     }
@@ -77,7 +77,11 @@ function parseContent_(values, ver) {
       var fig = { t: 'fig', cap: det, alt: s_(cell(r, 'הסבר')) || det };
       if (/^<svg/i.test(text)) fig.svg = safeSvg_(text);
       else if (/^https?:\/\//i.test(text)) fig.url = text;
-      else issues.push(where + 'איור צריך להכיל קוד SVG (שמתחיל ב-<svg) או כתובת תמונה (https)');
+      else if (!text && s_(cell(r, 'תמונה'))) {
+        fig.url = resolveImg_(cell(r, 'תמונה'));
+        if (!fig.url) issues.push(where + 'התמונה של האיור לא נמצאה בדרייב (אולי נמחקה). אפשר להעלות אותה שוב: מבדק > הוספת תמונה');
+      }
+      else issues.push(where + 'איור ממתין לתמונה: להעלות אותה דרך מבדק > הוספת תמונה (או להדביק SVG / כתובת https בעמודת הטקסט)');
       unit().items.push(fig); return;
     }
     if (kind === 'טבלה') {

@@ -48,13 +48,14 @@ const ctx = {
   PropertiesService: { getScriptProperties: () => ({ getProperty: k => props[k] || null, setProperty: (k, v) => { props[k] = v; } }) },
   SpreadsheetApp: { getActiveSpreadsheet: () => ss, openById: () => ss, getUi: () => ui, newDataValidation: () => permissive({ requireValueInList: () => permissive({ build: () => ({}) }) }) },
   LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
-  Utilities: { getUuid: () => crypto.randomUUID(), sleep: () => {} },
+  Utilities: { getUuid: () => crypto.randomUUID(), sleep: () => {}, base64Decode: s => Buffer.from(s, 'base64'), base64Encode: b => Buffer.from(b).toString('base64'), newBlob: (bytes, type, name) => ({ bytes, type, name }) },
+  DriveApp: (() => { const files = {}; return { createFolder: () => ({ getId: () => 'FOLDER1', createFile: blob => { const id = 'F' + Object.keys(files).length; files[id] = blob; return { getId: () => id }; } }), getFolderById: () => ({ getId: () => 'FOLDER1', createFile: blob => { const id = 'F' + Object.keys(files).length; files[id] = blob; return { getId: () => id }; } }), getFileById: id => { if (!files[id]) throw new Error('nf'); return { getBlob: () => ({ getContentType: () => files[id].type, getBytes: () => files[id].bytes }) }; } }; })(),
   ScriptApp: { getService: () => ({ getUrl: () => 'https://script.example/exec' }) },
   UrlFetchApp: { fetch: (url, o) => { fetchLog.push({ url, o }); if (/\/models\?/.test(url)) return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ models: [{ name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] }, { name: 'models/gemini-3.8-flash', supportedGenerationMethods: ['generateContent'] }, { name: 'models/gemini-3.8-flash-lite', supportedGenerationMethods: ['generateContent'] }] }) }; if (global.__failFn) { const c = global.__failFn(url); if (c) return { getResponseCode: () => c, getContentText: () => JSON.stringify({ error: { message: 'simulated ' + c } }) }; } const body = JSON.parse(o.payload); const userTxt = body.contents[0].parts[0].text; const arr = JSON.parse(userTxt.slice(userTxt.lastIndexOf('(JSON):\n') + 8)); const out = arr.map(x => ({ id: x.id, score: 7, note: 'הסברת נכון. כדאי להוסיף פרט.' })); return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(out) }] } }] }) }; } },
   ContentService: {}, HtmlService: {},
 };
 vm.createContext(ctx);
-['Content.gs', 'Code.gs', 'Setup.gs', 'Sample.gs'].forEach(f => vm.runInContext(fs.readFileSync(path.join(kit, f), 'utf8'), ctx, { filename: f }));
+['Content.gs', 'Images.gs', 'Code.gs', 'Setup.gs', 'Sample.gs'].forEach(f => vm.runInContext(fs.readFileSync(path.join(kit, f), 'utf8'), ctx, { filename: f }));
 const call = (src) => vm.runInContext(src, ctx);
 
 let bad = 0;
@@ -135,6 +136,24 @@ global.__failFn = url => (url.includes('gemini-3.8-flash:') ? 0 : 404);
 fetchLog.length = 0; let r3 = null; try { r3 = call(probe); } catch (e) { r3 = null; }
 ok(r3 && fetchLog.some(f => f.url.includes('gemini-3.8-flash:')), 'דגם מוגדר נדחה: מגלים דגם זמין (3.8) ועוברים אליו');
 global.__failFn = null;
+
+// ---------- תמונות מהמחשב ----------
+const tg = call('imageTargets()');
+ok(tg.length >= 3 && /תמונה ראשית ליחידה 1/.test(tg[0].label), 'imageTargets: ' + tg.length + ' יעדים');
+const tiny = 'data:image/jpeg;base64,' + Buffer.from('FAKEJPEG').toString('base64');
+call(`saveImage(${tg[0].row}, '${tiny}')`);
+const cellImg = sheets['שאלון'].rows[tg[0].row - 1][10];
+ok(/^drive:F\d+$/.test(cellImg), 'בתא התמונה נרשם ' + cellImg);
+ok(call(`built_('A')`).exam.units[0].image.startsWith('data:image/jpeg;base64,'), 'באנר היחידה מוטמע כ-data URI');
+let threw = false; try { call(`saveImage(${tg[0].row}, 'data:text/html;base64,AAAA')`); } catch (e) { threw = true; } ok(threw, 'קובץ שאינו תמונה נדחה');
+sheets['שאלון'].rows.push(['A', 'איור', '', '', 'איור בדיקה', '', '', '', '', '', '']);
+const pr = call(`parseContent_(ss_().getSheetByName('שאלון').getDataRange().getValues(), 'A')`);
+ok(pr.issues.some(i => /ממתין לתמונה/.test(i)), 'איור בלי תמונה מדווח בבדיקת תקינות');
+const figRow = sheets['שאלון'].rows.length;
+call(`saveImage(${figRow}, '${tiny}')`);
+const pr2 = call(`parseContent_(ss_().getSheetByName('שאלון').getDataRange().getValues(), 'A')`);
+ok(!pr2.issues.some(i => /ממתין לתמונה/.test(i)) && JSON.stringify(pr2.exam).includes('"url":"data:image/jpeg'), 'איור עם תמונה שהועלתה מוצג');
+sheets['שאלון'].rows.pop(); sheets['שאלון'].rows[tg[0].row - 1][10] = ''; call('BUILD_MEMO_ = {}');
 
 // ---------- פרסום ומשוב ----------
 call(`tPublish('${props.ADMIN_KEY}',['S1'],true,null)`);
