@@ -244,9 +244,18 @@ function newCode_(existing) {
 
 // ---------------------------------------------------------------- תלמידות
 
-/** נקרא מהדפדפן: מחזיר את השאלות בלי המפתח. */
-function getExam(version) {
-  return buildExam_(version === 'B' ? 'B' : 'A').exam;
+/** קוד גישה לנוסח ג (מועד ב). אפשר להחליף בלשונית "מידע" או ב-Script Properties בשם MOED_B_CODE. */
+var MOED_B_CODE_DEFAULT = 'REPLACE_WITH_ACCESS_CODE';
+function moedCode_() { return props_().getProperty('MOED_B_CODE') || MOED_B_CODE_DEFAULT; }
+function normVer_(v) { return v === 'B' ? 'B' : (v === 'C' ? 'C' : 'A'); }
+
+/** נקרא מהדפדפן: מחזיר את השאלות בלי המפתח. arg: מחרוזת נוסח, או {version, code}. */
+function getExam(arg) {
+  var version = (arg && typeof arg === 'object') ? arg.version : arg;
+  var code = (arg && typeof arg === 'object') ? String(arg.code || '').trim() : '';
+  var v = normVer_(version);
+  if (v === 'C' && code !== moedCode_()) return { error: 'הקוד של מועד ב אינו נכון. אפשר לבקש אותו מהמורה.' };
+  return buildExam_(v).exam;
 }
 
 function norm_(s) {
@@ -262,7 +271,7 @@ function scoreAuto_(key, answers) {
     var ok = false;
     if (k.type === 'mc' || k.type === 'select' || k.type === 'matrix') ok = aStr === k.answer;
     else if (k.type === 'num') { var n = Number(norm_(aStr).replace(/[^\d.]/g, '')); ok = aStr !== '' && n === k.answer; }
-    else if (k.type === 'text') ok = norm_(aStr).indexOf(k.accept) !== -1;
+    else if (k.type === 'text') { var nn = norm_(aStr); ok = [].concat(k.accept).some(function (acc) { return nn.indexOf(acc) !== -1; }); }
     var pts = ok ? k.max : 0;
     auto += pts; autoMax += k.max;
     closedRows.push({ field: f, ans: aStr, ok: ok, pts: pts, max: k.max });
@@ -306,7 +315,8 @@ function submitExam(sub) {
   sub.name = normName_(sub.name);
   sub.cls = normCls_(sub.cls);
   if (!sub.name) return { ok: false, error: 'חסר שם' };
-  var v = sub.version === 'B' ? 'B' : 'A';
+  var v = normVer_(sub.version);
+  if (v === 'C' && String(sub.code || '').trim() !== moedCode_() && normCls_(sub.cls) !== TEST_CLASS) return { ok: false, error: 'קוד מועד ב חסר או שגוי' };
   var key = buildExam_(v).key;
   var answers = sub.answers || {};
   var lock = LockService.getScriptLock();
@@ -417,7 +427,7 @@ function tGetAll(key) {
   needAdmin_(key);
   var ss = ss_();
   var res = table_('תוצאות').rows, op = table_('תשובות פתוחות').rows, cl = table_('תשובות סגורות').rows;
-  var metas = { A: meta_('A'), B: meta_('B') };
+  var metas = { A: meta_('A'), B: meta_('B'), C: meta_('C') };
   function strip(mt) { // בלי המפתח של הנכונות הסגורות הם לא סודיים למורה, אבל נשלח רק מה שנחוץ
     return mt;
   }
@@ -435,7 +445,7 @@ function tGetAll(key) {
   });
   var closed = cl.map(function (r) { return { sid: r[0], field: r[3], ans: r[4], ok: r[5] === 1, pts: Number(r[6]), max: Number(r[7]) }; });
   var drafts = Math.max(ss.getSheetByName('טיוטות').getLastRow() - 1, 0);
-  return { ok: true, metas: strip(metas), subs: subs, open: open, closed: closed, drafts: drafts, resultUrl: webUrl_() + '?page=result', qmeta: QMETA };
+  return { ok: true, metas: strip(metas), subs: subs, open: open, closed: closed, drafts: drafts, resultUrl: webUrl_() + '?page=result', qmeta: QMETA, qmetaC: QMETA_C, moedCode: moedCode_() };
 }
 
 /** שמירת ניקוד ומשוב. items: [{sid, field, score, feedback}] */
@@ -513,7 +523,7 @@ function toScore_(all, cls) {
   var res = table_('תוצאות').rows, names = {}, vers = {}, classes = {};
   var gone = {};
   res.forEach(function (r) { names[r[0]] = r[R.name - 1]; vers[r[0]] = r[R.ver - 1]; classes[r[0]] = r[R.cls - 1]; if (String(r[R.rem - 1]) === 'כן') gone[r[0]] = true; });
-  var metas = { A: meta_('A'), B: meta_('B') };
+  var metas = { A: meta_('A'), B: meta_('B'), C: meta_('C') };
   var out = [];
   table_('תשובות פתוחות').rows.forEach(function (r) {
     var has = r[O.sug - 1] !== '' && r[O.sug - 1] != null;

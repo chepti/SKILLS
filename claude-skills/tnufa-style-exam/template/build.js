@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const dir = __dirname;
 let html = fs.readFileSync(path.join(dir, 'Index.src.html'), 'utf8');
-const map = { wave: 'wave.jpg', party: 'party.jpg', slug: 'slug.jpg', microscope: 'microscope.jpg', runner: 'runner.jpg' };
+const map = { wave: 'wave.jpg', party: 'party.jpg', slug: 'slug.jpg', microscope: 'microscope.jpg', runner: 'runner.jpg', sprouts: 'sprouts.jpg', mule: 'mule.jpg', worm: 'worm.jpg' };
 let total = 0;
 for (const k of Object.keys(map)) {
   const p = path.join(dir, 'img', map[k]);

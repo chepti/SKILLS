@@ -156,15 +156,19 @@ function load(){
     renderAll();
   });
 }
+function verLbl(v){return v==='C'?'מועד ב':(v==='B'?'ב':'א');}
+function verFull(v){return v==='C'?'מועד ב':'נוסח '+(v==='B'?'ב':'א');}
+function QM(){return (clsFilter==='#C'&&D&&D.qmetaC)?D.qmetaC:D.qmeta;}
 var ALL=null,clsFilter=null,TESTCLS='חולמים תקשוב',showRem=false;
 function applyFilter(){
-  var cnt={},totalVis=0;ALL.subs.forEach(function(s){if(s.removed&&!showRem)return;cnt[s.cls]=(cnt[s.cls]||0)+1;totalVis++;});
-  if(clsFilter===null||(clsFilter!=='*'&&!cnt[clsFilter]))clsFilter=cnt['ח2']?'ח2':'*';
+  var cnt={},totalVis=0,cntC=0;
+  ALL.subs.forEach(function(s){if(s.removed&&!showRem)return;if(s.ver==='C'){cntC++;return;}cnt[s.cls]=(cnt[s.cls]||0)+1;totalVis++;});
+  if(clsFilter===null||(clsFilter!=='*'&&clsFilter!=='#C'&&!cnt[clsFilter])||(clsFilter==='#C'&&!cntC))clsFilter=cnt['ח2']?'ח2':'*';
   var names=Object.keys(cnt).sort(function(a,b){if(a===TESTCLS)return 1;if(b===TESTCLS)return -1;return a<b?-1:1;});
-  var h='<option value="*">כל הכיתות ('+totalVis+')</option>'+names.map(function(c){return '<option value="'+esc(c)+'">'+esc(c===TESTCLS?c+' (ניסיון)':c)+' ('+cnt[c]+')</option>';}).join('');
+  var h='<option value="*">כל הכיתות ('+totalVis+')</option>'+names.map(function(c){return '<option value="'+esc(c)+'">'+esc(c===TESTCLS?c+' (ניסיון)':c)+' ('+cnt[c]+')</option>';}).join('')+(cntC?'<option value="#C">מועד ב ('+cntC+')</option>':'');
   $('clsSel').innerHTML=h;$('clsSel').value=clsFilter;
   var keep={};
-  var subs=ALL.subs.filter(function(s){if(s.removed&&!showRem)return false;var ok=clsFilter==='*'||s.cls===clsFilter;if(ok)keep[s.sid]=1;return ok;});
+  var subs=ALL.subs.filter(function(s){if(s.removed&&!showRem)return false;var ok=clsFilter==='#C'?s.ver==='C':(s.ver!=='C'&&(clsFilter==='*'||s.cls===clsFilter));if(ok)keep[s.sid]=1;return ok;});
   D=Object.assign({},ALL,{subs:subs,open:ALL.open.filter(function(o){return keep[o.sid];}),closed:ALL.closed.filter(function(c){return keep[c.sid];})});
   index();
 }
@@ -320,7 +324,7 @@ function cardEl(g,withName){
   var s=SUB[g.sid];
   var c=document.createElement('div');c.className='card';
   var flags=(s.paste>0?'<span class="flag">ניסיונות הדבקה: '+s.paste+'</span>':'');
-  c.innerHTML='<h3><span class="tag">שאלה '+g.q.n+'</span>'+(withName?'<span>'+esc(s.name)+'</span><span class="tag">נוסח '+(s.ver==='A'?'א':'ב')+'</span>':'')+flags+'</h3><div class="stem">'+esc(g.q.stem)+'</div>';
+  c.innerHTML='<h3><span class="tag">שאלה '+g.q.n+'</span>'+(withName?'<span>'+esc(s.name)+'</span><span class="tag">'+verFull(s.ver)+'</span>':'')+flags+'</h3><div class="stem">'+esc(g.q.stem)+'</div>';
   g.fields.forEach(function(o){c.appendChild(fieldRow(o));});
   var pend=g.fields.filter(function(o){return o.sug!=null&&o.score==null;});
   if(pend.length){
@@ -336,12 +340,12 @@ function renderList(){
   if(mode==='student'){
     D.subs.forEach(function(s){
       var inf=openInfo(s.sid),cls=inf.done===0?'':(inf.done===inf.total?'full':'part');
-      h+='<div class="li'+(s.sid===selSid?' sel':'')+'" data-sid="'+s.sid+'" id="li-'+s.sid+'"><span class="dot '+cls+'"></span><span class="nm">'+esc(s.name)+'</span>'+(s.removed?'<span class="flag">הוסרה</span>':'')+'<span class="tag">'+(s.ver==='A'?'א':'ב')+'</span></div>';
+      h+='<div class="li'+(s.sid===selSid?' sel':'')+'" data-sid="'+s.sid+'" id="li-'+s.sid+'"><span class="dot '+cls+'"></span><span class="nm">'+esc(s.name)+'</span>'+(s.removed?'<span class="flag">הוסרה</span>':'')+'<span class="tag">'+verLbl(s.ver)+'</span></div>';
     });
     if(!D.subs.length)h='<div class="empty-msg">עוד אין הגשות.</div>';
   }else{
     var seen={};
-    ['A','B'].forEach(function(v){openQuestions(v).forEach(function(q){if(!seen[q.id]){seen[q.id]=q;}});});
+    ['A','B','C'].forEach(function(v){openQuestions(v).forEach(function(q){if(!seen[q.id]){seen[q.id]=q;}});});
     Object.keys(seen).sort(function(a,b){return seen[a].n-seen[b].n;}).forEach(function(id){
       var q=seen[id],tot=0,done=0;
       D.open.forEach(function(o){var m=fmeta(o.sid,o.field);if(m.qid===id){tot++;if(o.score!=null)done++;}});
@@ -367,7 +371,7 @@ function renderCards(keepScroll){
   if(mode==='student'){
     var s=SUB[selSid];if(!s){return;}
     var head=document.createElement('div');head.className='card';
-    head.innerHTML='<h3><span>'+esc(s.name)+'</span><span class="tag">'+esc(s.cls)+'</span><span class="tag">נוסח '+(s.ver==='A'?'א':'ב')+'</span><span class="tag">אוטומטי: '+s.auto+'</span><span class="tag">סה״כ כרגע: '+totalOf(s.sid)+' / '+s.max+'</span>'+(s.min!==''?'<span class="tag">'+s.min+' דקות</span>':'')+(s.paste>0?'<span class="flag">ניסיונות הדבקה: '+s.paste+'</span>':'')+(s.blur>3?'<span class="flag">יציאות מהחלון: '+s.blur+'</span>':'')+'</h3>'+(s.flags?'<div class="mut" style="margin-top:6px">דגלי הקלדה: '+esc(s.flags)+'</div>':'');
+    head.innerHTML='<h3><span>'+esc(s.name)+'</span><span class="tag">'+esc(s.cls)+'</span><span class="tag">'+verFull(s.ver)+'</span><span class="tag">אוטומטי: '+s.auto+'</span><span class="tag">סה״כ כרגע: '+totalOf(s.sid)+' / '+s.max+'</span>'+(s.min!==''?'<span class="tag">'+s.min+' דקות</span>':'')+(s.paste>0?'<span class="flag">ניסיונות הדבקה: '+s.paste+'</span>':'')+(s.blur>3?'<span class="flag">יציאות מהחלון: '+s.blur+'</span>':'')+'</h3>'+(s.flags?'<div class="mut" style="margin-top:6px">דגלי הקלדה: '+esc(s.flags)+'</div>':'');
     C.appendChild(head);
     studentActions(s,C,head);
     groupBySid(s.sid).forEach(function(g){
@@ -524,7 +528,7 @@ function renderDash(){
   // מסיחים
   h+='<h2 class="sec">איזה מסיח משך תלמידות (שאלות סגורות)</h2><div class="panel">'+distractors()+'</div>';
   // נוסחים
-  var byV={A:[],B:[]};complete.forEach(function(s){byV[s.ver].push(totalOf(s.sid));});
+  var byV={A:[],B:[],C:[]};complete.forEach(function(s){(byV[s.ver]||(byV[s.ver]=[])).push(totalOf(s.sid));});
   h+='<h2 class="sec">השוואת נוסחים</h2><div class="panel">נוסח א: ממוצע '+r1(avg(byV.A))+' ('+byV.A.length+' תלמידות) · נוסח ב: ממוצע '+r1(avg(byV.B))+' ('+byV.B.length+' תלמידות)<div class="mut">הפרש גדול עשוי להעיד שנוסח אחד קשה יותר, או על הבדל בין קבוצות הישיבה.</div></div>';
   // חיזוק
   var wk=complete.map(function(s){return {s:s,t:totalOf(s.sid)};}).sort(function(a,b){return a.t-b.t;}).slice(0,6);
@@ -550,25 +554,25 @@ function qStats(){
   return Object.keys(map).map(function(k){return map[k];}).sort(function(a,b){return a.n-b.n;});
 }
 function groupRates(qs,key){
-  var g={};qs.forEach(function(q){var v=D.qmeta[q.qid][key];var label=key==='unit'?'יחידה '+v:v;var o=g[label]||(g[label]={got:0,max:0});o.got+=q.got;o.max+=q.max;});
+  var g={};qs.forEach(function(q){var v=QM()[q.qid][key];var label=key==='unit'?'יחידה '+v:v;var o=g[label]||(g[label]={got:0,max:0});o.got+=q.got;o.max+=q.max;});
   return Object.keys(g).map(function(k){var p=g[k].max?g[k].got/g[k].max:null;return '<div class="qrow" style="grid-template-columns:160px 1fr 60px"><div>'+esc(k)+'</div><div class="bar2"><i class="'+(p==null?'':rateCls(p))+'" style="width:'+(p==null?0:Math.round(p*100))+'%"></i></div><div>'+(p==null?'-':Math.round(p*100)+'%')+'</div></div>';}).join('');
 }
 function weakest(sid){
   var s=SUB[sid],F=D.metas[s.ver].fields,ab={};
-  BYSID[sid].closed.forEach(function(c){var a=D.qmeta[F[c.field].qid].ab;(ab[a]=ab[a]||{g:0,m:0});ab[a].g+=c.pts;ab[a].m+=c.max;});
-  BYSID[sid].open.forEach(function(o){if(o.score==null)return;var a=D.qmeta[F[o.field].qid].ab;(ab[a]=ab[a]||{g:0,m:0});ab[a].g+=o.score;ab[a].m+=o.max;});
+  BYSID[sid].closed.forEach(function(c){var a=QM()[F[c.field].qid].ab;(ab[a]=ab[a]||{g:0,m:0});ab[a].g+=c.pts;ab[a].m+=c.max;});
+  BYSID[sid].open.forEach(function(o){if(o.score==null)return;var a=QM()[F[o.field].qid].ab;(ab[a]=ab[a]||{g:0,m:0});ab[a].g+=o.score;ab[a].m+=o.max;});
   var best=null,bp=2;Object.keys(ab).forEach(function(k){var p=ab[k].m?ab[k].g/ab[k].m:2;if(p<bp){bp=p;best=k;}});
   return best?best+' ('+Math.round(bp*100)+'%)':'-';
 }
 function distractors(){
   var h='';
-  ['A','B'].forEach(function(v){
+  ['A','B','C'].forEach(function(v){
     var M=D.metas[v].fields;
     Object.keys(M).filter(function(f){return M[f].kind==='mc';}).forEach(function(f){
       var m=M[f],cnt={},n=0;Object.keys(m.opts).forEach(function(k){cnt[k]=0;});
       D.subs.filter(function(s){return s.ver===v;}).forEach(function(s){var c=CLOSED[s.sid+'|'+f];if(c){n++;if(c.ans in cnt)cnt[c.ans]++;else cnt['_']=(cnt['_']||0)+1;}});
       if(!n)return;
-      h+='<div style="margin-bottom:14px"><b>נוסח '+(v==='A'?'א':'ב')+', שאלה '+m.n+'</b> <span class="mut">'+esc(m.stem.slice(0,90))+'</span>';
+      h+='<div style="margin-bottom:14px"><b>'+verFull(v)+', שאלה '+m.n+'</b> <span class="mut">'+esc(m.stem.slice(0,90))+'</span>';
       Object.keys(m.opts).forEach(function(k){
         h+='<div class="dist"><span style="width:44%">'+esc(m.opts[k].slice(0,70))+(k===m.answer?' (נכונה)':'')+'</span><span class="bb'+(k===m.answer?' c':'')+'" style="width:'+Math.round(cnt[k]/n*40)+'%;min-width:2px"></span><span>'+cnt[k]+'</span></div>';
       });
@@ -582,11 +586,12 @@ function distractors(){
 function renderPub(){
   var el=$('pubv');
   var h='<h2 class="sec" style="margin-top:4px">פרסום משובים לתלמידות</h2><div class="panel"><div>תלמידות נכנסות לכתובת הזו ומקלידות את הקוד האישי שלהן (הן קיבלו אותו בסוף המבדק):</div><input class="url" readonly value="'+esc(D.resultUrl)+'" onclick="this.select()"><div class="mut" style="margin-top:6px">משוב נראה לתלמידה רק אחרי שסימנת "פורסם". בין הניקוד והמשוב שכתבת היא תראה גם הסבר לכל שאלה סגורה ותשובה לדוגמה לפתוחות.</div></div>';
+  if(ALL&&ALL.moedCode)h+='<div class="panel" style="margin-top:12px"><b>מועד ב</b>: בטופס הכניסה בוחרות "מועד ב" ומקלידות את הקוד <b style="direction:ltr;display:inline-block;letter-spacing:2px">'+esc(ALL.moedCode)+'</b>. הנוסח הזה שונה לגמרי מנוסחים א וב (הקשרים, נתונים ושאלות חדשים), ותוצאותיו מוצגות בנפרד בסינון "מועד ב".</div>';
   h+='<div style="margin:14px 0;display:flex;gap:10px;flex-wrap:wrap"><button class="pill go" id="pubAll">פרסום לכל מי שנבדקה במלואה</button><button class="pill" id="unpubAll">הסרת פרסום מכולן</button></div>';
   h+='<div class="panel"><table class="t"><tr><th>שם</th><th>קוד</th><th>נוסח</th><th>נבדקה</th><th>ציון</th><th>משוב כללי לתלמידה</th><th>פורסם</th><th>עריכה</th></tr>';
   D.subs.forEach(function(s){
     var i=openInfo(s.sid);
-    h+='<tr><td>'+esc(s.name)+'</td><td style="direction:ltr;font-weight:700;letter-spacing:2px">'+esc(s.code)+'</td><td>'+(s.ver==='A'?'א':'ב')+'</td><td>'+i.done+'/'+i.total+'</td><td>'+totalOf(s.sid)+' / '+s.max+'</td><td><input class="url gen" data-sid="'+s.sid+'" style="direction:rtl;text-align:right" value="'+esc(s.gen)+'" placeholder="משפט או שניים"></td><td><input type="checkbox" class="ck pub" data-sid="'+s.sid+'"'+(s.pub?' checked':'')+'></td><td><button type="button" class="pill sm edit-s" data-sid="'+s.sid+'">שם או כיתה</button></td></tr>';
+    h+='<tr><td>'+esc(s.name)+'</td><td style="direction:ltr;font-weight:700;letter-spacing:2px">'+esc(s.code)+'</td><td>'+verLbl(s.ver)+'</td><td>'+i.done+'/'+i.total+'</td><td>'+totalOf(s.sid)+' / '+s.max+'</td><td><input class="url gen" data-sid="'+s.sid+'" style="direction:rtl;text-align:right" value="'+esc(s.gen)+'" placeholder="משפט או שניים"></td><td><input type="checkbox" class="ck pub" data-sid="'+s.sid+'"'+(s.pub?' checked':'')+'></td><td><button type="button" class="pill sm edit-s" data-sid="'+s.sid+'">שם או כיתה</button></td></tr>';
   });
   h+='</table></div>';
   el.innerHTML=h;

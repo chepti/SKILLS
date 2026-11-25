@@ -197,8 +197,13 @@ footer a{text-decoration:none;font-weight:700;}
     <div class="vers" role="group" aria-label="בחירת נוסח">
       <button type="button" class="pill" data-v="A">נוסח א</button>
       <button type="button" class="pill" data-v="B">נוסח ב</button>
+      <button type="button" class="pill" data-v="C">מועד ב</button>
     </div>
-    <p class="hint">המורה תגיד לכן איזה נוסח לבחור, לפי מקום הישיבה.</p>
+    <p class="hint">המורה תגיד לכן איזה נוסח לבחור, לפי מקום הישיבה. מועד ב מיועד רק למי שקיבלה קוד מהמורה.</p>
+    <div id="moedrow" style="display:none;margin-top:8px">
+      <label class="t" for="moed">קוד למועד ב</label>
+      <input class="txt" id="moed" type="text" autocomplete="off" maxlength="12" inputmode="numeric" style="max-width:240px;direction:ltr;text-align:center;letter-spacing:3px">
+    </div>
     <p class="err" id="err" role="alert"></p>
     <button type="button" class="pill go" id="go">התחלת המבדק</button>
   </div>
@@ -303,6 +308,19 @@ function slugSVG(){
     '<circle cx="310" cy="205" r="55" fill="#d6def5" stroke="#3d3a8c" stroke-width="3"/><circle cx="324" cy="197" r="16" fill="#9aa6dd"/>'+
     lab(1,310,30,310,150)+lab(2,58,66,138,138)+lab(3,562,66,462,130)+'</svg>';
 }
+function leafSVG(){
+  function lab(n,x,y,x2,y2){
+    return '<line x1="'+x+'" y1="'+y+'" x2="'+x2+'" y2="'+y2+'" stroke="#1c1c28" stroke-width="2"/><circle cx="'+x+'" cy="'+y+'" r="18" fill="#fff" stroke="#1c1c28" stroke-width="2.5"/><text x="'+x+'" y="'+(y+7)+'" text-anchor="middle" font-size="21" font-weight="700" fill="#1c1c28" font-family="Heebo,Arial,sans-serif">'+n+'</text>';
+  }
+  function chl(x,y,rot){return '<g transform="translate('+x+' '+y+') rotate('+rot+')"><ellipse rx="34" ry="18" fill="#7bc96f" stroke="#2f7a2b" stroke-width="3"/><rect x="-20" y="-7" width="10" height="14" rx="2" fill="#3f9a3a"/><rect x="-4" y="-7" width="10" height="14" rx="2" fill="#3f9a3a"/><rect x="12" y="-7" width="10" height="14" rx="2" fill="#3f9a3a"/></g>';}
+  return '<svg viewBox="0 0 620 400" role="img" aria-label="תא של עלה ובו שלושה חלקים מסומנים במספרים 1, 2 ו-3">'+
+    '<rect x="70" y="50" width="480" height="300" rx="34" fill="#e7f3d4" stroke="#6b4f1d" stroke-width="12"/>'+
+    '<rect x="82" y="62" width="456" height="276" rx="26" fill="#f6fbe9" stroke="#8ab062" stroke-width="3"/>'+
+    '<rect x="190" y="105" width="300" height="190" rx="70" fill="#d3ecf7" stroke="#4f8fb0" stroke-width="3"/>'+
+    chl(135,120,-20)+chl(140,285,15)+chl(470,90,10)+chl(250,318,-8)+
+    '<circle cx="520" cy="250" r="26" fill="#d6def5" stroke="#3d3a8c" stroke-width="3"/><circle cx="527" cy="245" r="9" fill="#9aa6dd"/>'+
+    lab(1,40,30,76,62)+lab(2,340,30,340,150)+lab(3,40,200,112,128)+'</svg>';
+}
 function lineSVG(g){
   var W=600,H=360,ml=70,mr=24,mt=28,mb=84,pw=W-ml-mr,ph=H-mt-mb;
   var xmin=g.xs[0],xmax=g.xs[g.xs.length-1];
@@ -310,7 +328,7 @@ function lineSVG(g){
   var Y=function(v){return mt+ph-(v-g.ymin)/(g.ymax-g.ymin)*ph;};
   var ink='#1c1c28',grid='#e1e1ea';
   var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(g.cap)+'" font-family="Heebo,Arial,sans-serif">';
-  for(var v=g.ymin;v<=g.ymax+1e-9;v+=g.ystep){var y=Y(v);s+='<line x1="'+ml+'" y1="'+y+'" x2="'+(W-mr)+'" y2="'+y+'" stroke="'+grid+'"/><text x="'+(ml-10)+'" y="'+(y+5)+'" text-anchor="end" font-size="15" fill="'+ink+'">'+v+'</text>';}
+  for(var v=g.ymin;v<=g.ymax+1e-9;v+=g.ystep){var y=Y(v);s+='<line x1="'+ml+'" y1="'+y+'" x2="'+(W-mr)+'" y2="'+y+'" stroke="'+grid+'"/><text x="'+(ml-10)+'" y="'+(y+5)+'" text-anchor="end" font-size="15" fill="'+ink+'">'+(Math.round(v*100)/100)+'</text>';}
   s+='<line x1="'+ml+'" y1="'+mt+'" x2="'+ml+'" y2="'+(mt+ph)+'" stroke="'+ink+'" stroke-width="2"/><line x1="'+ml+'" y1="'+(mt+ph)+'" x2="'+(W-mr)+'" y2="'+(mt+ph)+'" stroke="'+ink+'" stroke-width="2"/>';
   g.xs.forEach(function(x){s+='<line x1="'+X(x)+'" y1="'+(mt+ph)+'" x2="'+X(x)+'" y2="'+(mt+ph+6)+'" stroke="'+ink+'" stroke-width="2"/><text x="'+X(x)+'" y="'+(mt+ph+24)+'" text-anchor="middle" font-size="15" fill="'+ink+'">'+x+'</text>';});
   var cols=['#3d3a8c','#c2410c'];
@@ -395,7 +413,7 @@ function blockMatrix(b){
 }
 function renderExam(){
   var h='';
-  var UIMG={1:'__IMG_slug__',2:'__IMG_microscope__',3:'__IMG_runner__'};
+  var UIMG=EXAM.version==='C'?{1:'__IMG_sprouts__',2:'__IMG_mule__',3:'__IMG_worm__'}:{1:'__IMG_slug__',2:'__IMG_microscope__',3:'__IMG_runner__'};
   EXAM.units.forEach(function(u,ui){
     var inRead=false;
     var rOpen=function(){if(inRead)return '';inRead=true;return '<div class="reading" role="group" aria-label="קטע קריאה"><div class="rh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"/></svg>קטע קריאה: התחלה</div><div class="rb">';};
@@ -404,7 +422,7 @@ function renderExam(){
     u.items.forEach(function(it){
       if(it.t==='q'){h+=rClose();}else{h+=rOpen();}
       if(it.t==='p'){h+='<div class="passage"><p>'+it.html+'</p></div>';}
-      else if(it.t==='fig'){h+='<figure>'+slugSVG()+'<figcaption>'+it.cap+'</figcaption></figure>';}
+      else if(it.t==='fig'){h+='<figure>'+(it.name==='leaf'?leafSVG():slugSVG())+'<figcaption>'+it.cap+'</figcaption></figure>';}
       else if(it.t==='graph'){h+='<figure>'+lineSVG(it)+'<figcaption>'+it.cap+'</figcaption></figure>'+(it.note?'<p class="note" style="text-align:center">'+it.note+'</p>':'');}
       else if(it.t==='table'){
         h+='<p style="margin:14px 0 0;font-weight:700">'+it.cap+'</p><table class="data"><tr>'+it.head.map(function(x){return '<th>'+x+'</th>';}).join('')+'</tr>'+
@@ -506,7 +524,9 @@ function unitStats(){
 }
 function buildTrack(){
   var h='<div class="stations">';
-  for(var i=1;i<=4;i++){h+='<button type="button" class="stn" data-stn="'+i+'" aria-label="'+(i<4?'יחידה '+i+': ':'')+STN_LABEL[i]+'"><span class="dotc">'+i+'</span><span class="lbl">'+STN_LABEL[i]+'</span></button>';}
+  for(var i=1;i<=4;i++){
+    var lb=(i<4&&EXAM&&EXAM.units[i-1])?EXAM.units[i-1].title.replace(/[?]/g,'').split(' ').slice(0,2).join(' '):STN_LABEL[i];
+    h+='<button type="button" class="stn" data-stn="'+i+'" aria-label="'+(i<4?'יחידה '+i+': ':'')+lb+'"><span class="dotc">'+i+'</span><span class="lbl">'+lb+'</span></button>';}
   h+='</div><div class="allbar" aria-hidden="true"><i id="allfill"></i></div><div class="allpct" id="allpct"></div>';
   $('track').innerHTML=h;
   Array.prototype.forEach.call($('track').querySelectorAll('.stn'),function(b){b.addEventListener('click',function(){showUnit(Number(b.getAttribute('data-stn')));});});
@@ -555,7 +575,7 @@ document.addEventListener('click',function(e){
 
 /* ---------- שרת ---------- */
 function payload(){
-  return {sid:S.sid,name:S.name,cls:S.cls,version:S.version,startedAt:S.startedAt,answers:S.answers,keys:S.keys,lens:S.lens,events:S.events,fb:S.fb};
+  return {sid:S.sid,name:S.name,cls:S.cls,version:S.version,code:S.code||'',startedAt:S.startedAt,answers:S.answers,keys:S.keys,lens:S.lens,events:S.events,fb:S.fb};
 }
 function run(fn,arg,ok,fail){
   if(!(window.google&&google.script&&google.script.run)){fail&&fail(new Error('אין חיבור לשרת'));return;}
@@ -577,7 +597,7 @@ function startTimer(){
   },1000);
 }
 function begin(){
-  $('hsub').textContent='מדע וטכנולוגיה, כיתה ח׳ · נוסח '+(S.version==='A'?'א':'ב');
+  $('hsub').textContent='מדע וטכנולוגיה, כיתה ח׳ · '+(S.version==='C'?'מועד ב':'נוסח '+(S.version==='A'?'א':'ב'));
   renderExam();buildTrack();$('track').classList.add('on');show('s-exam');startTimer();
   showUnit(S.cur||1);
   clearInterval(saveH);saveH=setInterval(autosave,45000);
@@ -586,7 +606,11 @@ function begin(){
 function loadExam(then){
   $('err').textContent='';
   $('go').disabled=true;$('go').textContent='טוען...';
-  run('getExam',S.version,function(ex){EXAM=ex;$('go').disabled=false;$('go').textContent='התחלת המבדק';then();},function(e){
+  run('getExam',{version:S.version,code:S.code||''},function(ex){
+    $('go').disabled=false;$('go').textContent='התחלת המבדק';
+    if(!ex||ex.error){$('err').textContent=(ex&&ex.error)||'הטעינה נכשלה.';return;}
+    EXAM=ex;then();
+  },function(e){
     $('go').disabled=false;$('go').textContent='התחלת המבדק';$('err').textContent='הטעינה נכשלה. בדקי חיבור לאינטרנט ונסי שוב.';
   });
 }
@@ -594,6 +618,7 @@ var chosen=null;
 Array.prototype.forEach.call(document.querySelectorAll('.vers .pill'),function(b){
   b.addEventListener('click',function(){
     chosen=b.getAttribute('data-v');
+    $('moedrow').style.display=chosen==='C'?'block':'none';
     Array.prototype.forEach.call(document.querySelectorAll('.vers .pill'),function(x){x.classList.toggle('on',x===b);});
   });
 });
@@ -609,8 +634,10 @@ $('go').addEventListener('click',function(){
     if(!m){$('err').textContent='הכיתה נכתבת כאות וספרה, בלי סימנים. למשל: ח2';return;}
     cl=/^[א-ת]$/.test(m[1])?m[1]+m[2]:m[2]+m[1];
   }
-  if(!chosen){$('err').textContent='נא לבחור נוסח (א או ב).';return;}
-  S={sid:'s'+Date.now().toString(36)+Math.random().toString(36).slice(2,8),name:nm,cls:cl,version:chosen,startedAt:Date.now(),answers:{},keys:{},lens:{},events:{blur:0,paste:0},fb:{}};
+  if(!chosen){$('err').textContent='נא לבחור נוסח (א, ב או מועד ב).';return;}
+  var code=$('moed').value.trim();
+  if(chosen==='C'&&!code){$('err').textContent='נא להקליד את הקוד של מועד ב.';return;}
+  S={sid:'s'+Date.now().toString(36)+Math.random().toString(36).slice(2,8),name:nm,cls:cl,version:chosen,code:chosen==='C'?code:'',startedAt:Date.now(),answers:{},keys:{},lens:{},events:{blur:0,paste:0},fb:{}};
   lsSet();
   loadExam(begin);
 });
