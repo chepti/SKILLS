@@ -122,6 +122,7 @@
 | סקיל | מה הוא עושה |
 |---|---|
 | [`tnufa-style-exam`](claude-skills/tnufa-style-exam) | מבדק מקוון בסגנון תנופה: נוסחים א/ב, כתיבה בלי הדבקה, לוח בדיקה עם כוכבים והצעות ניקוד של סוכן, תמונה כיתתית ומשוב מפורט לתלמידות. Apps Script ו-Google Sheets |
+| [`tnufa-exam-author`](claude-skills/tnufa-exam-author) | כתיבת שאלון (יחידות, שאלות, תבחינים, נוסחים ומועד ב) בפורמט שמדביקים בגיליון של ערכת המבדק. מתאים ל-Claude וגם כ-Gem ב-Gemini |
 | [`sirkuni-upload`](claude-skills/sirkuni-upload) | הכנת סט שאלות עם תמונות והעלאה לסרקוני, עם קישור ישיר לסט |
 | [`pisga-course-form`](claude-skills/pisga-course-form) | מילוי טפסי בקשה להקמת פתרון למידה (פסגה), כולל חישוב שעות אקדמיות וסילבוס |
 | [`canva-presentation-build`](claude-skills/canva-presentation-build) | בניית מצגת ב-Canva מתוך שקפים מעוצבים קיימים, בלי מחולל |
@@ -130,6 +131,14 @@
 | [`launch-polish`](claude-skills/launch-polish) | בדיקות לפני פרסום אתר: תצוגה מקדימה, אייקון, SEO, אנליטיקס, מוכנות לסוכנים |
 | [`promo-video`](claude-skills/promo-video) | סרטון תדמית עם Remotion, בעברית וב-RTL, בשני יחסי תמונה |
 | [`youtube-cover`](claude-skills/youtube-cover) | קאבר ליוטיוב בסגנון קבוע, בלי בעיות של טקסט עברי בתמונה |
+
+---
+
+## ערכת מבדק בסגנון תנופה (בלי קוד)
+
+[`exam-kit`](exam-kit) היא ערכה שמורה מעתיקה כגיליון Google (עם הסקריפט שבתוכו), מוסיפה שאלון שכתבה עם בינה מלאכותית, ופורסת בכמה לחיצות. כוללת אתר לתלמידות, לוח בדיקה עם כוכבים, משוב מפורט עם קוד אישי, ותמונה כיתתית. הצעות ניקוד אופציונליות מ-Gemini, עם מפתח API שמדביקים בתא ייעודי בגיליון (לא בקוד ולא בשיחה), ובלי שמות תלמידות.
+
+1. משכפלים את גיליון התבנית. 2. מתקינים (תפריט "מבדק") ומדביקים שאלון שנכתב עם הסקיל [`tnufa-exam-author`](claude-skills/tnufa-exam-author) (או כ-Gem מתוך `gem-instructions.md`). 3. פורסים כאפליקציית אינטרנט. 4. מדביקים מפתח Gemini ומקבלים הצעות ניקוד. מדריך מלא: [exam-kit/README.md](exam-kit/README.md).
 
 ---
 
